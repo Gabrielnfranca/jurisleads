@@ -55,13 +55,27 @@ async function requireAdmin(req: NextRequest) {
   return user;
 }
 
+function normalizeDomain(value: string) {
+  return value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");
+}
+
+function isValidDomain(value: string) {
+  return /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z]{2,})+$/.test(value);
+}
+
 async function addDomainToVercel(domain: string) {
   const token = process.env.VERCEL_TOKEN;
   const projectId = process.env.VERCEL_PROJECT_ID;
+  const teamId = process.env.VERCEL_TEAM_ID;
 
   if (!token || !projectId) return { ok: false, error: "VERCEL_TOKEN ou VERCEL_PROJECT_ID não configurados." };
 
-  const res = await fetch(`https://api.vercel.com/v9/projects/${projectId}/domains`, {
+  const url = new URL(`https://api.vercel.com/v9/projects/${projectId}/domains`);
+  if (teamId) {
+    url.searchParams.set("teamId", teamId);
+  }
+
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -70,14 +84,15 @@ async function addDomainToVercel(domain: string) {
     body: JSON.stringify({ name: domain }),
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
     // Domínio já cadastrado não é erro crítico
     if (data.error?.code === "domain_already_in_use" || data.error?.code === "domain_already_exists") {
       return { ok: true, already: true };
     }
-    return { ok: false, error: data.error?.message || "Erro ao adicionar domínio na Vercel." };
+    const errCode = data.error?.code ? ` (${data.error.code})` : "";
+    return { ok: false, error: `${data.error?.message || "Erro ao adicionar domínio na Vercel."}${errCode}` };
   }
 
   return { ok: true, data };
@@ -102,15 +117,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "tenantId e dominio são obrigatórios." }, { status: 400 });
   }
 
+  const dominioNormalizado = normalizeDomain(dominio);
+
   // Valida formato básico do domínio
-  if (!/^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/.test(dominio)) {
+  if (!isValidDomain(dominioNormalizado)) {
     return NextResponse.json({ error: "Formato de domínio inválido." }, { status: 400 });
   }
 
   // Salva no banco
   const { error: dbError } = await supabaseAdmin
     .from("tenants")
-    .update({ dominio_customizado: dominio })
+    .update({ dominio_customizado: dominioNormalizado })
     .eq("id", tenantId);
 
   if (dbError) {
@@ -118,18 +135,20 @@ export async function POST(req: NextRequest) {
   }
 
   // Tenta adicionar na Vercel
-  const vercelResult = await addDomainToVercel(dominio);
+  const vercelResult = await addDomainToVercel(dominioNormalizado);
 
   if (!vercelResult.ok) {
     return NextResponse.json(
       { 
         saved: true, 
         vercel: false, 
-        warning: vercelResult.error 
+        warning: vercelResult.error,
+        dominio: dominioNormalizado,
+        dns_hint: "Configure CNAME para cname.vercel-dns.com ou siga as instruções da Vercel." 
       },
       { status: 200 }
     );
   }
 
-  return NextResponse.json({ saved: true, vercel: true, already: vercelResult.already ?? false });
+  return NextResponse.json({ saved: true, vercel: true, already: vercelResult.already ?? false, dominio: dominioNormalizado });
 }
