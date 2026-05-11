@@ -15,7 +15,6 @@ import {
   Flame,
   Clock,
   CheckCircle,
-  XCircle,
   Trash2,
   Save,
   ExternalLink,
@@ -27,6 +26,9 @@ import {
   KeyRound,
   LayoutDashboard,
   Info,
+  Settings,
+  Users,
+  Send,
 } from "lucide-react";
 import type { Lead } from "@/types";
 
@@ -81,6 +83,7 @@ export default function ClienteDetailPage() {
   const [deletando, setDeletando] = useState(false);
   const [form, setForm] = useState<Partial<Tenant>>({});
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"configuracoes" | "onboarding" | "leads">("configuracoes");
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -204,365 +207,358 @@ export default function ClienteDetailPage() {
 
   if (!tenant) return null;
 
+  const vercelApp =
+    process.env.NEXT_PUBLIC_VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : typeof window !== "undefined"
+      ? window.location.origin
+      : "";
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  const landingUrl = tenant.dominio_customizado
+    ? `https://${tenant.dominio_customizado}`
+    : rootDomain
+    ? `https://${tenant.slug}.${rootDomain}`
+    : `${vercelApp}/${tenant.slug}`;
+  const crmUrl = `${vercelApp}/login`;
+  const cnameTarget = rootDomain || vercelApp.replace("https://", "");
+  const msgOnboarding = `Olá! Bem-vindo ao JurisLeads 🎉\n\nSua página de captação já está no ar:\n🔗 ${landingUrl}\n\nAcesso ao seu CRM:\n🖥️ ${crmUrl}\n📧 ${tenant.email}\n\nQualquer dúvida, estou à disposição!`;
+
+  const TABS = [
+    { id: "configuracoes" as const, label: "Configurações", icon: Settings },
+    { id: "onboarding" as const, label: "Guia de Entrega", icon: Send },
+    { id: "leads" as const, label: `Leads`, badge: leads.length, icon: Users },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
-      {/* Navbar */}
-      <header className="bg-white border-b border-slate-100 px-4 sm:px-6 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
+      {/* ── Header ── */}
+      <header className="bg-white border-b border-slate-100 px-4 sm:px-6 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-20">
         <button
           onClick={() => router.push("/admin")}
           className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-blue-600 rounded-lg">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="p-1.5 bg-blue-600 rounded-lg shrink-0">
             <Shield className="w-4 h-4 text-white" />
           </div>
-          <div>
-            <span className="font-black text-slate-900">{tenant.nome}</span>
-            <code className="ml-2 text-xs font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
+          <div className="min-w-0">
+            <span className="font-black text-slate-900 truncate block">{tenant.nome}</span>
+            <code className="text-[11px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
               {tenant.slug}
             </code>
           </div>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+
+        {/* Status badge */}
+        <span className={`ml-2 shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${form.ativo ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
+          {form.ativo ? "Ativo" : "Inativo"}
+        </span>
+
+        <div className="ml-auto flex items-center gap-2 shrink-0">
           <a
-            href={getClientUrl(tenant.slug)}
+            href={landingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-blue-50 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-blue-50 transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" /> Ver Landing Page
           </a>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna esquerda — edição do cliente */}
-        <div className="lg:col-span-1 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-black text-slate-900">Configurações</h2>
+      {/* ── Tab Bar ── */}
+      <div className="bg-white border-b border-slate-100 px-4 sm:px-6 sticky top-[57px] z-10 shadow-sm">
+        <nav className="flex gap-1 max-w-5xl mx-auto">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
               <button
-                onClick={() => set("ativo", !form.ativo)}
-                className="flex items-center gap-1.5 text-xs font-bold transition-colors"
-                title={form.ativo ? "Desativar cliente" : "Ativar cliente"}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors ${
+                  active
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-200"
+                }`}
               >
-                {form.ativo ? (
-                  <>
-                    <ToggleRight className="w-5 h-5 text-emerald-500" />
-                    <span className="text-emerald-600">Ativo</span>
-                  </>
-                ) : (
-                  <>
-                    <ToggleLeft className="w-5 h-5 text-slate-400" />
-                    <span className="text-slate-400">Inativo</span>
-                  </>
+                <Icon className="w-4 h-4" />
+                {tab.label}
+                {"badge" in tab && (tab.badge ?? 0) > 0 && (
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${active ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
+                    {tab.badge}
+                  </span>
                 )}
               </button>
-            </div>
+            );
+          })}
+        </nav>
+      </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Nome
-              </Label>
-              <Input
-                value={form.nome || ""}
-                onChange={(e) => set("nome", e.target.value)}
-                className="text-sm"
-              />
-            </div>
+      {/* ── Content ── */}
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6">
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                WhatsApp
-              </Label>
-              <Input
-                value={form.whatsapp || ""}
-                onChange={(e) => set("whatsapp", e.target.value)}
-                className="text-sm"
-              />
-            </div>
+        {/* ═══ ABA: CONFIGURAÇÕES ═══ */}
+        {activeTab === "configuracoes" && (
+          <div className="max-w-xl space-y-5">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 className="font-black text-slate-900 text-lg">Dados do Cliente</h2>
+                <button
+                  onClick={() => set("ativo", !form.ativo)}
+                  className="flex items-center gap-1.5 text-xs font-bold transition-colors"
+                  title={form.ativo ? "Desativar cliente" : "Ativar cliente"}
+                >
+                  {form.ativo ? (
+                    <>
+                      <ToggleRight className="w-6 h-6 text-emerald-500" />
+                      <span className="text-emerald-600">Ativo</span>
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft className="w-6 h-6 text-slate-400" />
+                      <span className="text-slate-400">Inativo</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Área Jurídica
-              </Label>
-              <select
-                value={form.area_juridica || ""}
-                onChange={(e) => set("area_juridica", e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-blue-400"
-              >
-                {AREAS.map((a) => (
-                  <option key={a.value} value={a.value}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Nome</Label>
+                  <Input value={form.nome || ""} onChange={(e) => set("nome", e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">WhatsApp</Label>
+                  <Input value={form.whatsapp || ""} onChange={(e) => set("whatsapp", e.target.value)} />
+                </div>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Domínio Customizado (CNAME)
-              </Label>
-              <Input
-                value={form.dominio_customizado || ""}
-                onChange={(e) => set("dominio_customizado", e.target.value)}
-                placeholder="captura.drsouza.com.br"
-                className="text-sm font-mono"
-              />
-              <p className="text-[11px] text-slate-400">
-                Deixe em branco se não tiver domínio próprio.
-              </p>
-            </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Área Jurídica</Label>
+                <select
+                  value={form.area_juridica || ""}
+                  onChange={(e) => set("area_juridica", e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-blue-400"
+                >
+                  {AREAS.map((a) => (
+                    <option key={a.value} value={a.value}>{a.label}</option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Cor da Marca
-              </Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={form.cor_primaria || "#2563eb"}
-                  onChange={(e) => set("cor_primaria", e.target.value)}
-                  className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer"
-                />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Domínio Customizado (CNAME)
+                </Label>
                 <Input
-                  value={form.cor_primaria || ""}
-                  onChange={(e) => set("cor_primaria", e.target.value)}
-                  className="font-mono text-sm w-28"
+                  value={form.dominio_customizado || ""}
+                  onChange={(e) => set("dominio_customizado", e.target.value)}
+                  placeholder="captura.escritoriodacarol.com.br"
+                  className="font-mono"
                 />
+                <p className="text-[11px] text-slate-400">Deixe em branco se não tiver domínio próprio.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cor da Marca</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.cor_primaria || "#2563eb"}
+                    onChange={(e) => set("cor_primaria", e.target.value)}
+                    className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer"
+                  />
+                  <Input
+                    value={form.cor_primaria || ""}
+                    onChange={(e) => set("cor_primaria", e.target.value)}
+                    className="font-mono w-32"
+                  />
+                  <div
+                    className="w-10 h-10 rounded-xl border border-slate-200 shrink-0"
+                    style={{ backgroundColor: form.cor_primaria || "#2563eb" }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                >
+                  {salvo ? (
+                    <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Salvo!</span>
+                  ) : saving ? "Salvando..." : (
+                    <span className="flex items-center gap-1.5"><Save className="w-4 h-4" /> Salvar</span>
+                  )}
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  disabled={deletando}
+                  variant="outline"
+                  className="text-red-600 border-red-200 hover:bg-red-50 font-semibold"
+                >
+                  <Trash2 className="w-4 h-4 mr-1.5" />
+                  {deletando ? "Excluindo..." : "Excluir"}
+                </Button>
               </div>
             </div>
 
-            <div className="pt-2 space-y-2">
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm"
-              >
-                {salvo ? (
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle className="w-4 h-4" /> Salvo!
-                  </span>
-                ) : saving ? (
-                  "Salvando..."
-                ) : (
-                  <span className="flex items-center gap-1.5">
-                    <Save className="w-4 h-4" /> Salvar Alterações
-                  </span>
-                )}
-              </Button>
-              <Button
-                onClick={handleDelete}
-                disabled={deletando}
-                variant="outline"
-                className="w-full text-red-600 border-red-200 hover:bg-red-50 font-semibold text-sm"
-              >
-                <Trash2 className="w-4 h-4 mr-1.5" />
-                {deletando ? "Excluindo..." : "Excluir Cliente"}
-              </Button>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-400">
+              Cliente desde {new Date(tenant.created_at).toLocaleDateString("pt-BR")} · E-mail: <span className="font-mono text-slate-600">{tenant.email}</span>
             </div>
           </div>
+        )}
 
-          {/* Guia de Configuração para o Cliente */}
-          {(() => {
-            const vercelApp = process.env.NEXT_PUBLIC_VERCEL_URL
-              ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-              : typeof window !== "undefined"
-              ? window.location.origin
-              : "";
-            const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
-            const landingUrl = tenant.dominio_customizado
-              ? `https://${tenant.dominio_customizado}`
-              : rootDomain
-              ? `https://${tenant.slug}.${rootDomain}`
-              : `${vercelApp}/${tenant.slug}`;
-            const crmUrl = `${vercelApp}/login`;
-            const cnameTarget = rootDomain || vercelApp.replace("https://", "");
+        {/* ═══ ABA: GUIA DE ENTREGA ═══ */}
+        {activeTab === "onboarding" && (
+          <div className="max-w-2xl space-y-4">
 
-            return (
-              <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-slate-700 p-5 space-y-5 shadow-lg">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-blue-500/20 rounded-lg">
-                    <LayoutDashboard className="w-4 h-4 text-blue-400" />
-                  </div>
-                  <h3 className="text-white font-black text-sm tracking-tight">
-                    Guia de Configuração
-                  </h3>
+            {/* Card: Landing Page */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-50 rounded-xl"><Globe className="w-4 h-4 text-blue-600" /></div>
+                <div>
+                  <h3 className="font-black text-slate-900">Página de Captação</h3>
+                  <p className="text-xs text-slate-400">Link da landing page do cliente</p>
                 </div>
+              </div>
+              <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
+                <p className="text-blue-600 text-sm font-mono flex-1 truncate">{landingUrl}</p>
+                <button onClick={() => copyToClipboard(landingUrl, "landing")} className="shrink-0 p-1.5 rounded-lg hover:bg-slate-200 transition-colors">
+                  {copiedField === "landing" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-slate-400" />}
+                </button>
+              </div>
+              <a href={landingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline font-semibold">
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir e testar
+              </a>
+            </div>
 
-                {/* Landing Page */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Globe className="w-3.5 h-3.5 text-blue-400" />
-                    <p className="text-blue-300 text-[11px] font-bold uppercase tracking-widest">
-                      Página de Captação
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2.5 border border-slate-700">
-                    <p className="text-emerald-400 text-xs font-mono flex-1 truncate">{landingUrl}</p>
-                    <button
-                      onClick={() => copyToClipboard(landingUrl, "landing")}
-                      className="shrink-0 p-1 rounded hover:bg-slate-700 transition-colors"
-                      title="Copiar link"
-                    >
-                      {copiedField === "landing"
-                        ? <CheckCircle className="w-4 h-4 text-emerald-400" />
-                        : <Copy className="w-4 h-4 text-slate-400" />}
-                    </button>
-                  </div>
-                  <a
-                    href={landingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-blue-400 transition-colors"
-                  >
-                    <ExternalLink className="w-3 h-3" /> Testar landing page
-                  </a>
+            {/* Card: CNAME */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-amber-50 rounded-xl"><Link2 className="w-4 h-4 text-amber-600" /></div>
+                <div>
+                  <h3 className="font-black text-slate-900">Configuração CNAME</h3>
+                  <p className="text-xs text-slate-400">Para o cliente usar o próprio domínio</p>
                 </div>
-
-                {/* CNAME */}
-                <div className="space-y-2 bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
-                  <div className="flex items-center gap-1.5">
-                    <Link2 className="w-3.5 h-3.5 text-amber-400" />
-                    <p className="text-amber-300 text-[11px] font-bold uppercase tracking-widest">
-                      Domínio Próprio (CNAME)
-                    </p>
-                  </div>
-                  <p className="text-slate-400 text-[11px] leading-relaxed">
-                    O cliente deve criar esta entrada DNS no painel do provedor de domínio dele:
-                  </p>
-                  <div className="bg-slate-900 rounded-lg p-3 font-mono text-[11px] space-y-1.5">
-                    <div className="grid grid-cols-[auto_1fr] gap-x-3 items-center">
-                      <span className="text-slate-500">Tipo</span>
-                      <span className="text-white">CNAME</span>
-                    </div>
-                    <div className="grid grid-cols-[auto_1fr] gap-x-3 items-center">
-                      <span className="text-slate-500">Nome</span>
-                      <span className="text-amber-300">captacao</span>
-                    </div>
-                    <div className="grid grid-cols-[auto_1fr] gap-x-3 items-center">
-                      <span className="text-slate-500">Destino</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-emerald-400 break-all">{cnameTarget}</span>
-                        <button
-                          onClick={() => copyToClipboard(cnameTarget, "cname")}
-                          className="shrink-0 p-1 rounded hover:bg-slate-700 transition-colors"
-                        >
-                          {copiedField === "cname"
-                            ? <CheckCircle className="w-3 h-3 text-emerald-400" />
-                            : <Copy className="w-3 h-3 text-slate-400" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-1.5 bg-amber-500/10 rounded-lg px-2.5 py-2 border border-amber-500/20">
-                    <Info className="w-3 h-3 text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-amber-300/80 text-[10px] leading-relaxed">
-                      Após configurar o DNS, registre o domínio no campo &quot;Domínio Customizado&quot; acima e salve. O SSL é gerado automaticamente.
-                    </p>
-                  </div>
+              </div>
+              <p className="text-sm text-slate-500">O cliente deve adicionar esta entrada no painel de DNS do provedor de domínio dele:</p>
+              <div className="bg-slate-900 rounded-xl p-4 font-mono text-sm space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 text-xs uppercase tracking-wider w-16">Tipo</span>
+                  <span className="text-white flex-1">CNAME</span>
                 </div>
-
-                {/* Acesso CRM */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <KeyRound className="w-3.5 h-3.5 text-purple-400" />
-                    <p className="text-purple-300 text-[11px] font-bold uppercase tracking-widest">
-                      Acesso ao CRM
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">Link de Acesso</p>
-                      <div className="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2 border border-slate-700">
-                        <p className="text-blue-400 text-xs font-mono flex-1 truncate">{crmUrl}</p>
-                        <button
-                          onClick={() => copyToClipboard(crmUrl, "crm")}
-                          className="shrink-0 p-1 rounded hover:bg-slate-700 transition-colors"
-                        >
-                          {copiedField === "crm"
-                            ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                            : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-slate-500 text-[10px] uppercase tracking-wider mb-1">E-mail</p>
-                      <div className="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2 border border-slate-700">
-                        <p className="text-white text-xs font-mono flex-1 truncate">{tenant.email}</p>
-                        <button
-                          onClick={() => copyToClipboard(tenant.email, "email")}
-                          className="shrink-0 p-1 rounded hover:bg-slate-700 transition-colors"
-                        >
-                          {copiedField === "email"
-                            ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                            : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                <div className="border-t border-slate-800" />
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 text-xs uppercase tracking-wider w-16">Nome</span>
+                  <span className="text-amber-300 flex-1">captacao</span>
                 </div>
-
-                {/* Mensagem pronta para enviar */}
-                <div className="space-y-1.5">
-                  <p className="text-slate-500 text-[10px] uppercase tracking-wider">Mensagem Pronta para Enviar</p>
-                  {(() => {
-                    const msg = `Olá! Bem-vindo ao JurisLeads 🎉\n\nSua página de captação já está no ar:\n🔗 ${landingUrl}\n\nAcesso ao seu CRM:\n🖥️ ${crmUrl}\n📧 ${tenant.email}\n\nQualquer dúvida, estou à disposição!`;
-                    return (
-                      <div className="bg-slate-800 rounded-xl p-3 border border-slate-700 relative">
-                        <p className="text-slate-300 text-[11px] leading-relaxed whitespace-pre-line pr-6">{msg}</p>
-                        <button
-                          onClick={() => copyToClipboard(msg, "msg")}
-                          className="absolute top-2 right-2 p-1 rounded hover:bg-slate-700 transition-colors"
-                          title="Copiar mensagem"
-                        >
-                          {copiedField === "msg"
-                            ? <CheckCircle className="w-4 h-4 text-emerald-400" />
-                            : <Copy className="w-4 h-4 text-slate-400" />}
-                        </button>
-                      </div>
-                    );
-                  })()}
+                <div className="border-t border-slate-800" />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-slate-500 text-xs uppercase tracking-wider w-16">Destino</span>
+                  <span className="text-emerald-400 flex-1 break-all">{cnameTarget}</span>
+                  <button onClick={() => copyToClipboard(cnameTarget, "cname")} className="shrink-0 p-1.5 rounded-lg hover:bg-slate-700 transition-colors">
+                    {copiedField === "cname" ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                  </button>
                 </div>
-
-                <p className="text-slate-600 text-[10px]">
-                  Cliente desde {new Date(tenant.created_at).toLocaleDateString("pt-BR")}
+              </div>
+              <div className="flex items-start gap-2 bg-amber-50 rounded-xl p-3 border border-amber-100">
+                <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-amber-700 text-xs leading-relaxed">
+                  Após o cliente configurar o DNS, registre o domínio no campo <strong>Domínio Customizado</strong> na aba Configurações e salve. O certificado SSL é gerado automaticamente.
                 </p>
               </div>
-            );
-          })()}
-        </div>
+            </div>
 
-        {/* Coluna direita — leads */}
-        <div className="lg:col-span-2">
+            {/* Card: Acesso CRM */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-purple-50 rounded-xl"><KeyRound className="w-4 h-4 text-purple-600" /></div>
+                <div>
+                  <h3 className="font-black text-slate-900">Acesso ao CRM</h3>
+                  <p className="text-xs text-slate-400">Credenciais para o cliente entrar no painel</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Link de Acesso</p>
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-200">
+                    <p className="text-purple-600 text-xs font-mono flex-1 truncate">{crmUrl}</p>
+                    <button onClick={() => copyToClipboard(crmUrl, "crm")} className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors">
+                      {copiedField === "crm" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">E-mail</p>
+                  <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-200">
+                    <p className="text-slate-700 text-xs font-mono flex-1 truncate">{tenant.email}</p>
+                    <button onClick={() => copyToClipboard(tenant.email, "email")} className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors">
+                      {copiedField === "email" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-slate-400" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card: Mensagem pronta */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-emerald-50 rounded-xl"><MessageCircle className="w-4 h-4 text-emerald-600" /></div>
+                  <div>
+                    <h3 className="font-black text-slate-900">Mensagem Pronta</h3>
+                    <p className="text-xs text-slate-400">Copie e envie para o cliente via WhatsApp</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => copyToClipboard(msgOnboarding, "msg")}
+                  className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors border ${
+                    copiedField === "msg"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  {copiedField === "msg" ? <CheckCircle className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedField === "msg" ? "Copiado!" : "Copiar tudo"}
+                </button>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">{msgOnboarding}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ ABA: LEADS ═══ */}
+        {activeTab === "leads" && (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h2 className="font-black text-slate-900">Leads</h2>
-                <p className="text-xs text-slate-400 mt-0.5">{leads.length} lead{leads.length !== 1 ? "s" : ""} no total</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {leads.length} lead{leads.length !== 1 ? "s" : ""} no total
+                </p>
               </div>
             </div>
 
             {leads.length === 0 ? (
-              <div className="py-16 text-center">
-                <Bot className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                <p className="text-slate-400 font-medium">Nenhum lead ainda</p>
-                <p className="text-slate-300 text-sm mt-1">
-                  Os leads aparecem aqui assim que chegarem
-                </p>
+              <div className="py-20 text-center">
+                <Bot className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                <p className="text-slate-400 font-semibold">Nenhum lead ainda</p>
+                <p className="text-slate-300 text-sm mt-1">Os leads aparecem aqui assim que chegarem</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-50">
                 {leads.map((lead) => {
                   const scoreStyle = SCORE_STYLES[lead.ia_score as string] || "bg-slate-100 text-slate-500";
                   const whatsappUrl = `https://wa.me/${tenant.whatsapp}?text=${encodeURIComponent(`Olá ${lead.nome}, vi seu contato no nosso sistema.`)}`;
-
                   return (
-                    <div key={lead.id} className="px-6 py-4 hover:bg-slate-50/50 transition-colors">
+                    <div key={lead.id} className="px-6 py-4 hover:bg-slate-50/60 transition-colors">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -579,9 +575,7 @@ export default function ClienteDetailPage() {
                             <Phone className="w-3 h-3" /> {lead.telefone}
                           </p>
                           {lead.resumo && (
-                            <p className="text-xs text-slate-500 mt-1.5 italic line-clamp-2">
-                              &quot;{lead.resumo}&quot;
-                            </p>
+                            <p className="text-xs text-slate-500 mt-1.5 italic line-clamp-2">&quot;{lead.resumo}&quot;</p>
                           )}
                         </div>
                         <div className="flex flex-col items-end gap-2 shrink-0">
@@ -605,7 +599,7 @@ export default function ClienteDetailPage() {
               </div>
             )}
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
