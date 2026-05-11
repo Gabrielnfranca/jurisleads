@@ -230,47 +230,28 @@ export default function ClienteDetailPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
-      {/* ── Header ── */}
-      <header className="bg-white border-b border-slate-100 px-4 sm:px-6 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-20">
+    <div className="flex h-full bg-slate-50 font-sans overflow-hidden">
+      
+      {/* ── Sidebar (Admin Navigation) ── */}
+      <aside className="w-64 bg-slate-800 text-slate-200 flex flex-col hidden md:flex shrink-0 border-r border-slate-700">
+        <div className="h-16 flex items-center px-6 border-b border-slate-800">
+          <div className="flex items-center gap-2 text-white font-black text-lg">
+            <Shield className="w-5 h-5 text-cyan-300" /> JurisLeads Admin
+          </div>
+        </div>
+
         <button
           onClick={() => router.push("/admin")}
-          className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+          className="flex items-center gap-2 px-6 py-4 border-b border-slate-700 text-sm font-semibold hover:text-white hover:bg-slate-700 transition-colors text-left"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4 text-slate-400" /> Voltar para Clientes
         </button>
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="p-1.5 bg-blue-600 rounded-lg shrink-0">
-            <Shield className="w-4 h-4 text-white" />
-          </div>
-          <div className="min-w-0">
-            <span className="font-black text-slate-900 truncate block">{tenant.nome}</span>
-            <code className="text-[11px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
-              {tenant.slug}
-            </code>
-          </div>
+        
+        <div className="p-6 pb-2">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Gerenciar {tenant.nome}</p>
         </div>
 
-        {/* Status badge */}
-        <span className={`ml-2 shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${form.ativo ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-          {form.ativo ? "Ativo" : "Inativo"}
-        </span>
-
-        <div className="ml-auto flex items-center gap-2 shrink-0">
-          <a
-            href={landingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-blue-50 transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" /> Ver Landing Page
-          </a>
-        </div>
-      </header>
-
-      {/* ── Tab Bar ── */}
-      <div className="bg-white border-b border-slate-100 px-4 sm:px-6 sticky top-[57px] z-10 shadow-sm">
-        <nav className="flex gap-1 max-w-5xl mx-auto">
+        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -278,16 +259,18 @@ export default function ClienteDetailPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                   active
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-200"
+                    ? "bg-slate-700 text-white border border-slate-600"
+                    : "text-slate-300 hover:text-white hover:bg-slate-700"
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                {tab.label}
+                <Icon className={`w-4 h-4 ${active ? "text-cyan-200" : "text-slate-400"}`} />
+                <span className="flex-1 text-left">{tab.label}</span>
                 {"badge" in tab && (tab.badge ?? 0) > 0 && (
-                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${active ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                    active ? "bg-slate-100 text-slate-700" : "bg-slate-700 text-slate-300"
+                  }`}>
                     {tab.badge}
                   </span>
                 )}
@@ -295,10 +278,73 @@ export default function ClienteDetailPage() {
             );
           })}
         </nav>
-      </div>
+      </aside>
 
-      {/* ── Content ── */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6">
+      {/* ── Main Area ── */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        
+        {/* ── Mobile Header & Topbar ── */}
+        <header className="bg-white border-b border-slate-100 px-4 sm:px-6 h-16 flex items-center gap-3 shadow-sm shrink-0">
+          <button
+            onClick={() => router.push("/admin")}
+            className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="hidden md:flex p-2 bg-blue-50/50 rounded-xl border border-blue-100">
+              <Shield className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-black text-slate-900 truncate block text-lg">{tenant.nome}</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${form.ativo ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                  {form.ativo ? "Ativo" : "Inativo"}
+                </span>
+                <code className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
+                  {tenant.slug}
+                </code>
+              </div>
+            </div>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <a
+              href={landingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors shadow-sm"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Ver Landing Page</span>
+            </a>
+          </div>
+        </header>
+
+        {/* ── Mobile Tabs ── */}
+        <div className="md:hidden bg-white border-b border-slate-100 px-2 flex overflow-x-auto shrink-0 shadow-sm" style={{ scrollbarWidth: "none" }}>
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${
+                  active
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-slate-500"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Scrollable Content ── */}
+        <main className="flex-1 overflow-y-auto w-full p-4 sm:p-6 lg:p-8">
 
         {/* ═══ ABA: CONFIGURAÇÕES ═══ */}
         {activeTab === "configuracoes" && (
@@ -601,6 +647,7 @@ export default function ClienteDetailPage() {
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 }

@@ -97,33 +97,24 @@ export default function AdminPage() {
   const ativos = tenants.filter((t) => t.ativo).length;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
-      {/* Navbar */}
-      <header className="bg-white border-b border-slate-100 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 bg-blue-600 rounded-lg">
-            <Shield className="w-5 h-5 text-white" />
+    <div className="min-h-full bg-slate-50 font-sans pb-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-8 space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Visão Geral</h1>
+            <p className="text-sm text-slate-500 font-medium">Acompanhe as métricas e gerencie as contas.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-black text-slate-900 text-lg tracking-tight">JurisLeads</span>
-            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-widest">
-              Admin
-            </span>
+          <div className="flex items-center gap-3">
+             <span className="text-sm text-slate-400 font-medium">{userEmail}</span>
+             <button
+              onClick={() => router.push("/admin/clientes/novo")}
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm shadow-blue-600/20 active:scale-95"
+            >
+              <Plus className="w-4 h-4" /> Novo Cliente
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-400 hidden sm:block">{userEmail}</span>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sair</span>
-          </button>
-        </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[

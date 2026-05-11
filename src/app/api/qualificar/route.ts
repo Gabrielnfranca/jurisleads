@@ -4,13 +4,27 @@ import { NextRequest, NextResponse } from "next/server";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// Cliente server-side com service_role — nunca exposto ao browser
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    return null;
+  }
+
+  // Cliente server-side com service_role — nunca exposto ao browser
+  return createClient(url, serviceKey);
+}
 
 export async function POST(req: NextRequest) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) {
+    return NextResponse.json(
+      { error: "Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY." },
+      { status: 500 }
+    );
+  }
+
   const { slug, nome, telefone, situacao, motivo, tempo, provas } = await req.json();
 
   const missingFields = [

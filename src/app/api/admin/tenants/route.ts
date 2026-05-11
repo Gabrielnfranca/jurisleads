@@ -3,19 +3,33 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    return null;
+  }
+
+  return createClient(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 async function requireAdmin(req: NextRequest) {
   const adminEmail = process.env.ADMIN_EMAIL;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseAdmin = getSupabaseAdmin();
+
+  if (!url || !anonKey || !supabaseAdmin) {
+    return null;
+  }
 
   const cookieStore = await cookies();
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
   );
 
@@ -42,6 +56,14 @@ async function requireAdmin(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) {
+    return NextResponse.json(
+      { error: "Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY." },
+      { status: 500 }
+    );
+  }
+
   if (!(await requireAdmin(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -82,6 +104,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) {
+    return NextResponse.json(
+      { error: "Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY." },
+      { status: 500 }
+    );
+  }
+
   if (!(await requireAdmin(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

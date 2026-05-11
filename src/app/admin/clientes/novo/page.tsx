@@ -149,20 +149,17 @@ export default function NovoClientePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
-      {/* Navbar */}
-      <header className="bg-white border-b border-slate-100 px-4 sm:px-6 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10">
+    <div className="min-h-full bg-slate-50 font-sans pb-10">
+      <header className="bg-white border-b border-slate-100 px-4 sm:px-6 py-4 flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+          className="p-2 -ml-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-blue-600 rounded-lg">
-            <Shield className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-black text-slate-900">Novo Cliente</span>
+        <div>
+          <h1 className="font-black text-slate-900 text-lg">Novo Cliente</h1>
+          <p className="text-xs font-medium text-slate-500">Preencha os dados para provisionar o ambiente</p>
         </div>
       </header>
 
