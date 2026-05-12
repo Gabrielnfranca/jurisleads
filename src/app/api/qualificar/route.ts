@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { slug, nome, telefone, situacao, motivo, tempo, provas } = await req.json();
+  const { slug, nome, telefone, situacao, motivo, tempo, provas, ab_variant, ab_session_id } = await req.json();
 
   const missingFields = [
     ["situacao", situacao],
@@ -119,7 +119,7 @@ Responda EXATAMENTE neste formato JSON:
     pontos_fortes = JSON.stringify(["Irregularidades identificadas no relato", "Caso encaminhado para análise jurídica"]);
   }
 
-  const { error } = await supabaseAdmin.from("leads").insert({
+  const { data: lead, error } = await supabaseAdmin.from("leads").insert({
     slug,
     nome,
     telefone,
@@ -133,11 +133,23 @@ Responda EXATAMENTE neste formato JSON:
     valor_estimado,
     pontos_fortes,
     status: "novo",
-  });
+  }).select("id").single();
 
   if (error) {
     console.error("[qualificar] Erro Supabase:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (["A", "B"].includes(String(ab_variant)) && String(ab_session_id || "").trim()) {
+    await supabaseAdmin.from("ab_events").insert({
+      slug,
+      session_id: String(ab_session_id),
+      variant: String(ab_variant),
+      event_name: "submitted",
+      step: 5,
+      ia_score,
+      lead_id: lead?.id,
+    });
   }
 
   let pontosFortesParsed: string[] = [];

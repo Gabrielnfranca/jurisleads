@@ -35,10 +35,12 @@ export async function proxy(req: NextRequest) {
   const hostname = req.headers.get("host") || "";
   const host = hostname.split(":")[0];
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "";
+  const isVercelHost = host.endsWith(".vercel.app");
 
   // ─── Roteamento por subdomínio (produção) ────────────────────────────────
   if (rootDomain && host !== rootDomain && host !== `www.${rootDomain}`) {
-    const subdomain = host.replace(`.${rootDomain}`, "");
+    const isRootSubdomain = host.endsWith(`.${rootDomain}`);
+    const subdomain = isRootSubdomain ? host.replace(`.${rootDomain}`, "") : "";
 
     if (subdomain === "admin") {
       if (url.pathname === "/" || url.pathname === "") {
@@ -49,15 +51,28 @@ export async function proxy(req: NextRequest) {
       return NextResponse.rewrite(url);
     }
 
-    if (subdomain && !subdomain.includes(".") && subdomain !== "localhost") {
+    // Subdomínio da plataforma (ex: lp.seudominio-base.com): usa slug direto.
+    if (isRootSubdomain && subdomain && subdomain !== "localhost") {
       url.pathname = `/${subdomain}`;
       return NextResponse.rewrite(url);
     }
 
-    // Domínio customizado via CNAME (ex: captacao.escritoriodacarol.com.br)
-    // O host não é subdomínio do rootDomain → passa o host completo como parâmetro de rota
-    if (subdomain.includes(".") && !host.startsWith("localhost")) {
-      url.pathname = `/${host}`;
+    // Em domínios da própria Vercel (produção/preview), mantém rota padrão /slug.
+    if (isVercelHost) {
+      return NextResponse.next();
+    }
+
+    // Domínio customizado com subdomínio de captura (ex: lp.cliente.com.br)
+    if (!isRootSubdomain && !host.startsWith("localhost")) {
+      const parts = host.split(".");
+      if (parts.length >= 3) {
+        const slug = parts[0];
+        const customDomain = parts.slice(1).join(".");
+        url.pathname = `/${slug}/${customDomain}`;
+      } else {
+        // fallback para domínio sem subdomínio (ex: cliente.com.br)
+        url.pathname = `/captacao/${host}`;
+      }
       return NextResponse.rewrite(url);
     }
   }
@@ -66,8 +81,9 @@ export async function proxy(req: NextRequest) {
   const isAdminPath =
     url.pathname.startsWith("/admin") && !url.pathname.startsWith("/admin/login");
   const isDashboardPath = url.pathname.startsWith("/dashboard");
+  const isCrmConfigPath = url.pathname.startsWith("/configuracoes");
 
-  if (!isAdminPath && !isDashboardPath) {
+  if (!isAdminPath && !isDashboardPath && !isCrmConfigPath) {
     return NextResponse.next();
   }
 

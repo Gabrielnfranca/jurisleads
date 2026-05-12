@@ -1,34 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-  ArrowLeft,
-  Shield,
-  Phone,
-  MessageCircle,
-  Bot,
-  Flame,
-  Clock,
   CheckCircle,
-  Trash2,
-  Save,
-  ExternalLink,
-  ToggleLeft,
-  ToggleRight,
   Copy,
+  ExternalLink,
+  Flame,
   Globe,
-  Link2,
-  KeyRound,
-  LayoutDashboard,
   Info,
+  Link2,
+  MessageCircle,
+  Save,
   Settings,
+  Trash2,
   Users,
-  Send,
 } from "lucide-react";
 import type { Lead } from "@/types";
 
@@ -45,10 +35,30 @@ interface Tenant {
   created_at: string;
 }
 
+interface AbVariantMetrics {
+  started: number;
+  completed: number;
+  quente: number;
+  morno: number;
+  frio: number;
+  completionRate: number;
+}
+
+interface AbMetricsResponse {
+  variants: {
+    A: AbVariantMetrics;
+    B: AbVariantMetrics;
+  };
+}
+
+type DateRange = "day" | "week" | "month";
+
+type TabId = "configuracoes" | "links" | "leads";
+
 const STATUS_LABELS: Record<string, string> = {
   novo: "Novo",
-  em_analise: "Em Análise",
-  atendimento: "Em Atendimento",
+  em_analise: "Em analise",
+  atendimento: "Em atendimento",
   fechado: "Fechado",
 };
 
@@ -60,38 +70,56 @@ const SCORE_STYLES: Record<string, string> = {
 
 const AREAS = [
   { value: "trabalhista", label: "Trabalhista" },
-  { value: "previdenciario", label: "Previdenciário" },
+  { value: "previdenciario", label: "Previdenciario" },
   { value: "consumidor", label: "Consumidor" },
-  { value: "familia", label: "Família" },
+  { value: "familia", label: "Familia" },
   { value: "criminal", label: "Criminal" },
-  { value: "tributario", label: "Tributário" },
-  { value: "imobiliario", label: "Imobiliário" },
+  { value: "tributario", label: "Tributario" },
+  { value: "imobiliario", label: "Imobiliario" },
   { value: "civil", label: "Civil Geral" },
 ];
+
+const RANGE_OPTIONS: Array<{ id: DateRange; label: string; days: number }> = [
+  { id: "day", label: "Hoje", days: 1 },
+  { id: "week", label: "7 dias", days: 7 },
+  { id: "month", label: "30 dias", days: 30 },
+];
+
+function normalizeHost(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "");
+}
 
 export default function ClienteDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const supabase = createClient();
   const id = params.id as string;
+  const supabase = useMemo(() => createClient(), []);
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [form, setForm] = useState<Partial<Tenant>>({});
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const [deletando, setDeletando] = useState(false);
-  const [form, setForm] = useState<Partial<Tenant>>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"configuracoes" | "onboarding" | "leads">("configuracoes");
+  const [abMetrics, setAbMetrics] = useState<AbMetricsResponse | null>(null);
+  const [abMetricsMessage, setAbMetricsMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("leads");
+  const [dateRange, setDateRange] = useState<DateRange>("week");
+  const [leadPage, setLeadPage] = useState(1);
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://jurisleads.vercel.app";
 
-  const copyToClipboard = (text: string, field: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
-  };
+  const pageSize = 15;
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
       const {
         data: { session },
@@ -114,8 +142,11 @@ export default function ClienteDetailPage() {
       }
 
       const data = await res.json();
+      if (cancelled) return;
+
       setTenant(data.tenant);
       setForm({
+        slug: data.tenant.slug || "captacao",
         nome: data.tenant.nome,
         whatsapp: data.tenant.whatsapp,
         area_juridica: data.tenant.area_juridica,
@@ -123,17 +154,171 @@ export default function ClienteDetailPage() {
         ativo: data.tenant.ativo,
         dominio_customizado: data.tenant.dominio_customizado || "",
       });
-      setLeads(data.leads);
+      setLeads(Array.isArray(data.leads) ? data.leads : []);
       setLoading(false);
     };
 
     load();
-  }, [id, router]);
 
-  const set = (field: string, value: unknown) =>
+    return () => {
+      cancelled = true;
+    };
+  }, [id, router, supabase]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAbMetrics = async () => {
+      if (!tenant?.slug) return;
+
+      const days = RANGE_OPTIONS.find((item) => item.id === dateRange)?.days || 7;
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) return;
+
+      try {
+        const abRes = await fetch(`/api/admin/ab-metrics?slug=${encodeURIComponent(tenant.slug)}&days=${days}`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (!abRes.ok) {
+          if (!cancelled) {
+            setAbMetrics(null);
+            setAbMetricsMessage("Nao foi possivel carregar metricas A/B neste momento.");
+          }
+          return;
+        }
+
+        const abData = await abRes.json();
+        if (cancelled) return;
+
+        if (abData?.setupRequired) {
+          setAbMetrics(null);
+          setAbMetricsMessage(abData?.message || "A/B test ainda nao inicializado no banco.");
+          return;
+        }
+
+        setAbMetrics(abData);
+        setAbMetricsMessage(null);
+      } catch {
+        if (!cancelled) {
+          setAbMetrics(null);
+          setAbMetricsMessage("Nao foi possivel carregar metricas A/B neste momento.");
+        }
+      }
+    };
+
+    loadAbMetrics();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange, supabase, tenant?.slug]);
+
+  const setField = (field: string, value: unknown) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 1800);
+  };
+
+  const platformHost = normalizeHost(baseUrl).replace(/^www\./, "");
+
+  const isReservedPlatformHost = (value: string) => {
+    const host = normalizeHost(value).replace(/^www\./, "");
+    if (!host) return false;
+    return host === platformHost || host.endsWith(`.${platformHost}`);
+  };
+
+  const isValidCustomHost = (value: string) => {
+    if (!value) return false;
+    if (!value.includes(".")) return false;
+    if (!/^[a-z0-9.-]+$/.test(value)) return false;
+    if (isReservedPlatformHost(value)) return false;
+    return true;
+  };
+
+  const slugAtual = (form.slug || tenant?.slug || "captacao")
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "");
+
+  const dominioCustomAtual = normalizeHost((form.dominio_customizado || "").toString());
+  const dominioCustomErro = !dominioCustomAtual
+    ? null
+    : isReservedPlatformHost(dominioCustomAtual)
+    ? "Dominio da plataforma nao pode ser usado como CNAME de cliente."
+    : !isValidCustomHost(dominioCustomAtual)
+    ? `Dominio invalido. Exemplo: ${slugAtual}.cliente.com.br`
+    : null;
+
+  const dominioCustomValido = !dominioCustomErro;
+
+  const landingUrl = dominioCustomAtual && dominioCustomValido
+    ? `https://${dominioCustomAtual}`
+    : `${baseUrl}/${slugAtual}`;
+
+  const crmUrl = `${baseUrl}/login`;
+  const cnameTarget = "cname.vercel-dns.com";
+
+  const selectedRangeDays = RANGE_OPTIONS.find((item) => item.id === dateRange)?.days || 7;
+
+  const filteredLeads = useMemo(() => {
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+
+    if (dateRange === "week") {
+      since.setDate(since.getDate() - 6);
+    }
+
+    if (dateRange === "month") {
+      since.setDate(since.getDate() - 29);
+    }
+
+    return leads.filter((lead) => new Date(lead.created_at) >= since);
+  }, [dateRange, leads]);
+
+  const leadStats = useMemo(() => {
+    return {
+      total: filteredLeads.length,
+      quente: filteredLeads.filter((lead) => lead.ia_score === "Quente").length,
+      morno: filteredLeads.filter((lead) => lead.ia_score === "Morno").length,
+      frio: filteredLeads.filter((lead) => lead.ia_score === "Frio").length,
+    };
+  }, [filteredLeads]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+
+  const pagedLeads = useMemo(() => {
+    const start = (leadPage - 1) * pageSize;
+    return filteredLeads.slice(start, start + pageSize);
+  }, [filteredLeads, leadPage]);
+
+  const buildPayload = () => {
+    const slugNormalizado = (form.slug || tenant?.slug || "captacao")
+      .toString()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "");
+
+    const dominioNormalizado = normalizeHost((form.dominio_customizado || "").toString());
+
+    return {
+      ...form,
+      slug: slugNormalizado,
+      dominio_customizado: dominioNormalizado,
+    };
+  };
+
   const handleSave = async () => {
+    if (!tenant) return;
+
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -143,24 +328,49 @@ export default function ClienteDetailPage() {
       return;
     }
 
+    if (dominioCustomAtual && !dominioCustomValido) {
+      setSaveError(dominioCustomErro || "Dominio customizado invalido.");
+      return;
+    }
+
     setSaving(true);
+    setSaveError(null);
+
     const res = await fetch(`/api/admin/tenants/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify(form),
+      body: JSON.stringify(buildPayload()),
     });
+
     setSaving(false);
-    if (res.ok) {
-      setSalvo(true);
-      setTimeout(() => setSalvo(false), 2500);
+
+    if (!res.ok) {
+      let msg = "Erro ao salvar alteracoes.";
+      try {
+        const err = await res.json();
+        msg = err?.error || msg;
+      } catch {
+        // noop
+      }
+      setSaveError(msg);
+      return;
     }
+
+    const updated = await res.json();
+    setTenant(updated);
+    setForm((prev) => ({ ...prev, ...updated, dominio_customizado: updated?.dominio_customizado || "" }));
+    setSalvo(true);
+    setTimeout(() => setSalvo(false), 1800);
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Excluir o cliente "${tenant?.nome}" e todos os seus dados? Esta ação é irreversível.`)) return;
+    if (!tenant) return;
+
+    const ok = confirm(`Excluir o cliente \"${tenant.nome}\" e todos os dados dele?`);
+    if (!ok) return;
 
     const {
       data: { session },
@@ -178,13 +388,8 @@ export default function ClienteDetailPage() {
         Authorization: `Bearer ${session.access_token}`,
       },
     });
-    router.push("/admin");
-  };
 
-  const getClientUrl = (slug: string) => {
-    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
-    if (rootDomain) return `https://${slug}.${rootDomain}`;
-    return `${window.location.origin}/${slug}`;
+    router.push("/admin");
   };
 
   const formatDate = (iso: string) => {
@@ -199,141 +404,60 @@ export default function ClienteDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-400">Carregando...</p>
+      <div className="min-h-full bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-400">Carregando cliente...</p>
       </div>
     );
   }
 
   if (!tenant) return null;
 
-  const vercelApp =
-    process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : typeof window !== "undefined"
-      ? window.location.origin
-      : "";
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
-  const landingUrl = tenant.dominio_customizado
-    ? `https://${tenant.dominio_customizado}`
-    : rootDomain
-    ? `https://${tenant.slug}.${rootDomain}`
-    : `${vercelApp}/${tenant.slug}`;
-  const crmUrl = `${vercelApp}/login`;
-  const cnameTarget = rootDomain || vercelApp.replace("https://", "");
-  const msgOnboarding = `Olá! Bem-vindo ao JurisLeads 🎉\n\nSua página de captação já está no ar:\n🔗 ${landingUrl}\n\nAcesso ao seu CRM:\n🖥️ ${crmUrl}\n📧 ${tenant.email}\n\nQualquer dúvida, estou à disposição!`;
-
-  const TABS = [
-    { id: "configuracoes" as const, label: "Configurações", icon: Settings },
-    { id: "onboarding" as const, label: "Guia de Entrega", icon: Send },
-    { id: "leads" as const, label: `Leads`, badge: leads.length, icon: Users },
-  ];
-
   return (
-    <div className="flex h-full bg-slate-50 font-sans overflow-hidden">
-      
-      {/* ── Sidebar (Admin Navigation) ── */}
-      <aside className="w-64 bg-slate-800 text-slate-200 flex flex-col hidden md:flex shrink-0 border-r border-slate-700">
-        <div className="h-16 flex items-center px-6 border-b border-slate-800">
-          <div className="flex items-center gap-2 text-white font-black text-lg">
-            <Shield className="w-5 h-5 text-cyan-300" /> JurisLeads Admin
-          </div>
-        </div>
-
-        <button
-          onClick={() => router.push("/admin")}
-          className="flex items-center gap-2 px-6 py-4 border-b border-slate-700 text-sm font-semibold hover:text-white hover:bg-slate-700 transition-colors text-left"
-        >
-          <ArrowLeft className="w-4 h-4 text-slate-400" /> Voltar para Clientes
-        </button>
-        
-        <div className="p-6 pb-2">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Gerenciar {tenant.nome}</p>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                  active
-                    ? "bg-slate-700 text-white border border-slate-600"
-                    : "text-slate-300 hover:text-white hover:bg-slate-700"
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${active ? "text-cyan-200" : "text-slate-400"}`} />
-                <span className="flex-1 text-left">{tab.label}</span>
-                {"badge" in tab && (tab.badge ?? 0) > 0 && (
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                    active ? "bg-slate-100 text-slate-700" : "bg-slate-700 text-slate-300"
-                  }`}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* ── Main Area ── */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        
-        {/* ── Mobile Header & Topbar ── */}
-        <header className="bg-white border-b border-slate-100 px-4 sm:px-6 h-16 flex items-center gap-3 shadow-sm shrink-0">
-          <button
-            onClick={() => router.push("/admin")}
-            className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="hidden md:flex p-2 bg-blue-50/50 rounded-xl border border-blue-100">
-              <Shield className="w-4 h-4 text-blue-600" />
-            </div>
-            <div className="min-w-0">
-              <span className="font-black text-slate-900 truncate block text-lg">{tenant.nome}</span>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${form.ativo ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+    <div className="min-h-full bg-slate-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-5">
+        <header className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Cliente</p>
+              <h1 className="text-2xl font-black text-slate-900 mt-1">{tenant.nome}</h1>
+              <div className="flex items-center gap-2 mt-2 text-xs">
+                <span className={`px-2 py-1 rounded-full font-semibold ${form.ativo ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
                   {form.ativo ? "Ativo" : "Inativo"}
                 </span>
-                <code className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
-                  {tenant.slug}
-                </code>
+                <span className="font-mono text-slate-500">/{slugAtual}</span>
               </div>
             </div>
-          </div>
 
-          <div className="ml-auto flex items-center gap-2 shrink-0">
-            <a
-              href={landingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors shadow-sm"
-            >
-              <ExternalLink className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Ver Landing Page</span>
-            </a>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => window.open(landingUrl, "_blank", "noopener,noreferrer")}
+                variant="outline"
+                className="gap-2"
+              >
+                <ExternalLink className="w-4 h-4" /> Abrir landing
+              </Button>
+              <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 gap-2">
+                {salvo ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                {saving ? "Salvando..." : salvo ? "Salvo" : "Salvar"}
+              </Button>
+            </div>
           </div>
         </header>
 
-        {/* ── Mobile Tabs ── */}
-        <div className="md:hidden bg-white border-b border-slate-100 px-2 flex overflow-x-auto shrink-0 shadow-sm" style={{ scrollbarWidth: "none" }}>
-          {TABS.map((tab) => {
+        <div className="bg-white border border-slate-200 rounded-2xl p-2 shadow-sm flex gap-1 overflow-x-auto">
+          {[
+            { id: "leads" as const, label: "Leads e A/B", icon: Users },
+            { id: "links" as const, label: "Links e Entrega", icon: Globe },
+            { id: "configuracoes" as const, label: "Configuracoes", icon: Settings },
+          ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${
-                  active
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-slate-500"
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                  active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -343,310 +467,364 @@ export default function ClienteDetailPage() {
           })}
         </div>
 
-        {/* ── Scrollable Content ── */}
-        <main className="flex-1 overflow-y-auto w-full p-4 sm:p-6 lg:p-8">
-
-        {/* ═══ ABA: CONFIGURAÇÕES ═══ */}
         {activeTab === "configuracoes" && (
-          <div className="max-w-xl space-y-5">
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
-              <div className="flex items-center justify-between">
-                <h2 className="font-black text-slate-900 text-lg">Dados do Cliente</h2>
-                <button
-                  onClick={() => set("ativo", !form.ativo)}
-                  className="flex items-center gap-1.5 text-xs font-bold transition-colors"
-                  title={form.ativo ? "Desativar cliente" : "Ativar cliente"}
-                >
-                  {form.ativo ? (
-                    <>
-                      <ToggleRight className="w-6 h-6 text-emerald-500" />
-                      <span className="text-emerald-600">Ativo</span>
-                    </>
-                  ) : (
-                    <>
-                      <ToggleLeft className="w-6 h-6 text-slate-400" />
-                      <span className="text-slate-400">Inativo</span>
-                    </>
-                  )}
-                </button>
-              </div>
+          <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm max-w-3xl space-y-5">
+            <h2 className="text-lg font-black text-slate-900">Configuracoes do cliente</h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Nome</Label>
-                  <Input value={form.nome || ""} onChange={(e) => set("nome", e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">WhatsApp</Label>
-                  <Input value={form.whatsapp || ""} onChange={(e) => set("whatsapp", e.target.value)} />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Área Jurídica</Label>
+                <Label>Nome</Label>
+                <Input value={form.nome || ""} onChange={(e) => setField("nome", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Slug</Label>
+                <Input
+                  value={form.slug || ""}
+                  onChange={(e) => setField("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  className="font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Area juridica</Label>
                 <select
                   value={form.area_juridica || ""}
-                  onChange={(e) => set("area_juridica", e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-blue-400"
+                  onChange={(e) => setField("area_juridica", e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:border-blue-400"
                 >
-                  {AREAS.map((a) => (
-                    <option key={a.value} value={a.value}>{a.label}</option>
+                  {AREAS.map((area) => (
+                    <option key={area.value} value={area.value}>
+                      {area.label}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  Domínio Customizado (CNAME)
-                </Label>
-                <Input
-                  value={form.dominio_customizado || ""}
-                  onChange={(e) => set("dominio_customizado", e.target.value)}
-                  placeholder="captura.escritoriodacarol.com.br"
-                  className="font-mono"
+                <Label>WhatsApp</Label>
+                <Input value={form.whatsapp || ""} onChange={(e) => setField("whatsapp", e.target.value)} />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Dominio customizado</Label>
+              <Input
+                value={form.dominio_customizado || ""}
+                onChange={(e) => setField("dominio_customizado", normalizeHost(e.target.value))}
+                placeholder={`${slugAtual}.cliente.com.br`}
+                className="font-mono"
+              />
+              {dominioCustomErro && <p className="text-xs text-red-600">{dominioCustomErro}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Cor primaria</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={form.cor_primaria || "#2563eb"}
+                  onChange={(e) => setField("cor_primaria", e.target.value)}
+                  className="w-10 h-10 rounded-lg border border-slate-200"
                 />
-                <p className="text-[11px] text-slate-400">Deixe em branco se não tiver domínio próprio.</p>
+                <Input
+                  value={form.cor_primaria || ""}
+                  onChange={(e) => setField("cor_primaria", e.target.value)}
+                  className="w-40 font-mono"
+                />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cor da Marca</Label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={form.cor_primaria || "#2563eb"}
-                    onChange={(e) => set("cor_primaria", e.target.value)}
-                    className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer"
-                  />
-                  <Input
-                    value={form.cor_primaria || ""}
-                    onChange={(e) => set("cor_primaria", e.target.value)}
-                    className="font-mono w-32"
-                  />
-                  <div
-                    className="w-10 h-10 rounded-xl border border-slate-200 shrink-0"
-                    style={{ backgroundColor: form.cor_primaria || "#2563eb" }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold"
+            <div className="space-y-2">
+              <Label>Status da captacao</Label>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <span
+                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold w-fit ${
+                    form.ativo ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                  }`}
                 >
-                  {salvo ? (
-                    <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4" /> Salvo!</span>
-                  ) : saving ? "Salvando..." : (
-                    <span className="flex items-center gap-1.5"><Save className="w-4 h-4" /> Salvar</span>
-                  )}
-                </Button>
+                  {form.ativo ? "Landing ativa" : "Landing suspensa"}
+                </span>
+
+                <p className="text-xs text-slate-500 flex-1">
+                  Quando suspensa, a landing mostra aviso de pagina cancelada e bloqueia novos leads.
+                </p>
+
                 <Button
-                  onClick={handleDelete}
-                  disabled={deletando}
+                  type="button"
                   variant="outline"
-                  className="text-red-600 border-red-200 hover:bg-red-50 font-semibold"
+                  className={form.ativo ? "text-amber-700 border-amber-200 hover:bg-amber-50" : "text-emerald-700 border-emerald-200 hover:bg-emerald-50"}
+                  onClick={() => setField("ativo", !form.ativo)}
                 >
-                  <Trash2 className="w-4 h-4 mr-1.5" />
-                  {deletando ? "Excluindo..." : "Excluir"}
+                  {form.ativo ? "Desativar" : "Ativar"}
                 </Button>
               </div>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-400">
-              Cliente desde {new Date(tenant.created_at).toLocaleDateString("pt-BR")} · E-mail: <span className="font-mono text-slate-600">{tenant.email}</span>
+            {saveError && (
+              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {saveError}
+              </p>
+            )}
+
+            <div className="flex items-center gap-3">
+              <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 gap-2">
+                <Save className="w-4 h-4" />
+                {saving ? "Salvando..." : "Salvar alteracoes"}
+              </Button>
+
+              <Button
+                onClick={handleDelete}
+                disabled={deletando}
+                variant="outline"
+                className="text-red-600 border-red-200 hover:bg-red-50 gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                {deletando ? "Excluindo..." : "Excluir cliente"}
+              </Button>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* ═══ ABA: GUIA DE ENTREGA ═══ */}
-        {activeTab === "onboarding" && (
-          <div className="max-w-2xl space-y-4">
+        {activeTab === "links" && (
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <article className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+              <h2 className="text-lg font-black text-slate-900">Links principais</h2>
 
-            {/* Card: Landing Page */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-50 rounded-xl"><Globe className="w-4 h-4 text-blue-600" /></div>
-                <div>
-                  <h3 className="font-black text-slate-900">Página de Captação</h3>
-                  <p className="text-xs text-slate-400">Link da landing page do cliente</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
-                <p className="text-blue-600 text-sm font-mono flex-1 truncate">{landingUrl}</p>
-                <button onClick={() => copyToClipboard(landingUrl, "landing")} className="shrink-0 p-1.5 rounded-lg hover:bg-slate-200 transition-colors">
-                  {copiedField === "landing" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-slate-400" />}
-                </button>
-              </div>
-              <a href={landingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline font-semibold">
-                <ExternalLink className="w-3.5 h-3.5" /> Abrir e testar
-              </a>
-            </div>
-
-            {/* Card: CNAME */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-amber-50 rounded-xl"><Link2 className="w-4 h-4 text-amber-600" /></div>
-                <div>
-                  <h3 className="font-black text-slate-900">Configuração CNAME</h3>
-                  <p className="text-xs text-slate-400">Para o cliente usar o próprio domínio</p>
-                </div>
-              </div>
-              <p className="text-sm text-slate-500">O cliente deve adicionar esta entrada no painel de DNS do provedor de domínio dele:</p>
-              <div className="bg-slate-900 rounded-xl p-4 font-mono text-sm space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 text-xs uppercase tracking-wider w-16">Tipo</span>
-                  <span className="text-white flex-1">CNAME</span>
-                </div>
-                <div className="border-t border-slate-800" />
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 text-xs uppercase tracking-wider w-16">Nome</span>
-                  <span className="text-amber-300 flex-1">captacao</span>
-                </div>
-                <div className="border-t border-slate-800" />
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500 text-xs uppercase tracking-wider w-16">Destino</span>
-                  <span className="text-emerald-400 flex-1 break-all">{cnameTarget}</span>
-                  <button onClick={() => copyToClipboard(cnameTarget, "cname")} className="shrink-0 p-1.5 rounded-lg hover:bg-slate-700 transition-colors">
-                    {copiedField === "cname" ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-500" />}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Landing</p>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                  <p className="text-sm text-slate-700 font-mono truncate flex-1">{landingUrl}</p>
+                  <button onClick={() => copyToClipboard(landingUrl, "landing")} className="p-1 rounded hover:bg-slate-200">
+                    {copiedField === "landing" ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
                   </button>
                 </div>
               </div>
-              <div className="flex items-start gap-2 bg-amber-50 rounded-xl p-3 border border-amber-100">
-                <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-amber-700 text-xs leading-relaxed">
-                  Após o cliente configurar o DNS, registre o domínio no campo <strong>Domínio Customizado</strong> na aba Configurações e salve. O certificado SSL é gerado automaticamente.
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">CRM</p>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                  <p className="text-sm text-slate-700 font-mono truncate flex-1">{crmUrl}</p>
+                  <button onClick={() => copyToClipboard(crmUrl, "crm")} className="p-1 rounded hover:bg-slate-200">
+                    {copiedField === "crm" ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Email do cliente</p>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                  <p className="text-sm text-slate-700 font-mono truncate flex-1">{tenant.email}</p>
+                  <button onClick={() => copyToClipboard(tenant.email, "email")} className="p-1 rounded hover:bg-slate-200">
+                    {copiedField === "email" ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <article className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+              <h2 className="text-lg font-black text-slate-900">Configuracao de dominio</h2>
+
+              <div className="bg-slate-900 rounded-xl p-4 space-y-3 font-mono text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="text-slate-400">Tipo</span>
+                  <span className="text-white">CNAME</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-slate-400">Nome</span>
+                  <span className="text-amber-300">{slugAtual}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-slate-400">Destino</span>
+                  <span className="text-emerald-300 break-all">{cnameTarget}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => copyToClipboard(cnameTarget, "cname")}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg"
+              >
+                <Link2 className="w-4 h-4" />
+                {copiedField === "cname" ? "Destino copiado" : "Copiar destino CNAME"}
+              </button>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex gap-2">
+                <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                <p>
+                  Depois de criar o CNAME no DNS do cliente, informe o dominio completo em
+                  &quot;Dominio customizado&quot; e salve.
                 </p>
               </div>
-            </div>
-
-            {/* Card: Acesso CRM */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-purple-50 rounded-xl"><KeyRound className="w-4 h-4 text-purple-600" /></div>
-                <div>
-                  <h3 className="font-black text-slate-900">Acesso ao CRM</h3>
-                  <p className="text-xs text-slate-400">Credenciais para o cliente entrar no painel</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Link de Acesso</p>
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-200">
-                    <p className="text-purple-600 text-xs font-mono flex-1 truncate">{crmUrl}</p>
-                    <button onClick={() => copyToClipboard(crmUrl, "crm")} className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors">
-                      {copiedField === "crm" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-slate-400" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">E-mail</p>
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-200">
-                    <p className="text-slate-700 text-xs font-mono flex-1 truncate">{tenant.email}</p>
-                    <button onClick={() => copyToClipboard(tenant.email, "email")} className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors">
-                      {copiedField === "email" ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-slate-400" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card: Mensagem pronta */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-emerald-50 rounded-xl"><MessageCircle className="w-4 h-4 text-emerald-600" /></div>
-                  <div>
-                    <h3 className="font-black text-slate-900">Mensagem Pronta</h3>
-                    <p className="text-xs text-slate-400">Copie e envie para o cliente via WhatsApp</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(msgOnboarding, "msg")}
-                  className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors border ${
-                    copiedField === "msg"
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                  }`}
-                >
-                  {copiedField === "msg" ? <CheckCircle className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copiedField === "msg" ? "Copiado!" : "Copiar tudo"}
-                </button>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">{msgOnboarding}</p>
-              </div>
-            </div>
-          </div>
+            </article>
+          </section>
         )}
 
-        {/* ═══ ABA: LEADS ═══ */}
         {activeTab === "leads" && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <section className="space-y-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
               <div>
-                <h2 className="font-black text-slate-900">Leads</h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {leads.length} lead{leads.length !== 1 ? "s" : ""} no total
+                <h2 className="text-lg font-black text-slate-900">Leads por periodo</h2>
+                <p className="text-sm text-slate-500">
+                  Filtre por dia, semana ou mes para acompanhar volume e qualidade.
                 </p>
               </div>
-            </div>
 
-            {leads.length === 0 ? (
-              <div className="py-20 text-center">
-                <Bot className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                <p className="text-slate-400 font-semibold">Nenhum lead ainda</p>
-                <p className="text-slate-300 text-sm mt-1">Os leads aparecem aqui assim que chegarem</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                {leads.map((lead) => {
-                  const scoreStyle = SCORE_STYLES[lead.ia_score as string] || "bg-slate-100 text-slate-500";
-                  const whatsappUrl = `https://wa.me/${tenant.whatsapp}?text=${encodeURIComponent(`Olá ${lead.nome}, vi seu contato no nosso sistema.`)}`;
+              <div className="flex items-center gap-2">
+                {RANGE_OPTIONS.map((option) => {
+                  const active = dateRange === option.id;
                   return (
-                    <div key={lead.id} className="px-6 py-4 hover:bg-slate-50/60 transition-colors">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${scoreStyle}`}>
-                              {lead.ia_score === "Quente" && <Flame className="w-3 h-3" />}
-                              {lead.ia_score}
-                            </span>
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                              {STATUS_LABELS[lead.status] || lead.status}
-                            </span>
-                          </div>
-                          <p className="font-black text-slate-900 text-sm">{lead.nome}</p>
-                          <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {lead.telefone}
-                          </p>
-                          {lead.resumo && (
-                            <p className="text-xs text-slate-500 mt-1.5 italic line-clamp-2">&quot;{lead.resumo}&quot;</p>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {formatDate(lead.created_at)}
-                          </span>
-                          <a
-                            href={whatsappUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition-colors border border-emerald-100"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
-                          </a>
-                        </div>
-                      </div>
-                    </div>
+                    <button
+                      key={option.id}
+                      onClick={() => {
+                        setDateRange(option.id);
+                        setLeadPage(1);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                        active ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
                   );
                 })}
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { label: `Leads (${selectedRangeDays}d)`, value: leadStats.total },
+                { label: "Quente", value: leadStats.quente },
+                { label: "Morno", value: leadStats.morno },
+                { label: "Frio", value: leadStats.frio },
+              ].map((item) => (
+                <article key={item.label} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                  <p className="text-2xl font-black text-slate-900">{item.value}</p>
+                  <p className="text-xs text-slate-500 mt-1">{item.label}</p>
+                </article>
+              ))}
+            </div>
+
+            {abMetricsMessage && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                {abMetricsMessage}
+              </div>
             )}
-          </div>
+
+            {abMetrics && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <article className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                  <p className="text-xs font-black uppercase text-slate-400 tracking-wide">Variante A</p>
+                  <div className="mt-2 space-y-1 text-sm text-slate-700">
+                    <p>Iniciados: <span className="font-bold text-slate-900">{abMetrics.variants.A.started}</span></p>
+                    <p>Concluidos: <span className="font-bold text-slate-900">{abMetrics.variants.A.completed}</span></p>
+                    <p>Taxa: <span className="font-bold text-blue-700">{abMetrics.variants.A.completionRate}%</span></p>
+                    <p className="text-xs text-slate-500">Quente/Morno/Frio: {abMetrics.variants.A.quente}/{abMetrics.variants.A.morno}/{abMetrics.variants.A.frio}</p>
+                  </div>
+                </article>
+
+                <article className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                  <p className="text-xs font-black uppercase text-slate-400 tracking-wide">Variante B</p>
+                  <div className="mt-2 space-y-1 text-sm text-slate-700">
+                    <p>Iniciados: <span className="font-bold text-slate-900">{abMetrics.variants.B.started}</span></p>
+                    <p>Concluidos: <span className="font-bold text-slate-900">{abMetrics.variants.B.completed}</span></p>
+                    <p>Taxa: <span className="font-bold text-blue-700">{abMetrics.variants.B.completionRate}%</span></p>
+                    <p className="text-xs text-slate-500">Quente/Morno/Frio: {abMetrics.variants.B.quente}/{abMetrics.variants.B.morno}/{abMetrics.variants.B.frio}</p>
+                  </div>
+                </article>
+              </div>
+            )}
+
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="font-black text-slate-900">Lista de leads</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Exibindo {pagedLeads.length} de {filteredLeads.length} leads no periodo
+                  </p>
+                </div>
+              </div>
+
+              {filteredLeads.length === 0 ? (
+                <div className="py-16 text-center text-slate-400">Nenhum lead encontrado nesse periodo.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px]">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-left">
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Data</th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Lead</th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Telefone</th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Score</th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Status</th>
+                        <th className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">Acao</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {pagedLeads.map((lead) => {
+                        const scoreStyle = SCORE_STYLES[lead.ia_score as string] || "bg-slate-100 text-slate-600";
+                        const whatsappUrl = `https://wa.me/${tenant.whatsapp}?text=${encodeURIComponent(
+                          `Ola ${lead.nome}, vi seu contato no sistema.`
+                        )}`;
+
+                        return (
+                          <tr key={lead.id} className="hover:bg-slate-50/70">
+                            <td className="px-4 py-3 text-xs text-slate-500">{formatDate(lead.created_at)}</td>
+                            <td className="px-4 py-3">
+                              <p className="text-sm font-semibold text-slate-900">{lead.nome}</p>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-600">{lead.telefone}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded ${scoreStyle}`}>
+                                {lead.ia_score === "Quente" && <Flame className="w-3 h-3" />}
+                                {lead.ia_score}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-600">
+                              {STATUS_LABELS[lead.status] || lead.status}
+                            </td>
+                            <td className="px-4 py-3">
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-lg hover:bg-emerald-100"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                              </a>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {filteredLeads.length > pageSize && (
+                <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between text-sm">
+                  <p className="text-slate-500">Pagina {leadPage} de {totalPages}</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setLeadPage((prev) => Math.max(1, prev - 1))}
+                      disabled={leadPage === 1}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      onClick={() => setLeadPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={leadPage === totalPages}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40"
+                    >
+                      Proxima
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
         )}
-      </main>
       </div>
     </div>
   );

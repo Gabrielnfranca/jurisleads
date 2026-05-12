@@ -22,7 +22,7 @@ async function requireAdmin(req: NextRequest) {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const supabaseAdmin = getSupabaseAdmin();
 
-  if (!url || !anonKey || !supabaseAdmin) {
+  if (!url || !anonKey || !supabaseAdmin || !adminEmail) {
     return null;
   }
 
@@ -37,7 +37,7 @@ async function requireAdmin(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (session?.user?.email && (!adminEmail || session.user.email === adminEmail)) {
+  if (session?.user?.email && session.user.email === adminEmail) {
     return session.user;
   }
 
@@ -51,7 +51,7 @@ async function requireAdmin(req: NextRequest) {
   } = await supabaseAdmin.auth.getUser(token);
 
   if (error || !user) return null;
-  if (adminEmail && user.email !== adminEmail) return null;
+  if (user.email !== adminEmail) return null;
   return user;
 }
 
@@ -99,6 +99,10 @@ async function addDomainToVercel(domain: string) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!process.env.ADMIN_EMAIL) {
+    return NextResponse.json({ error: "ADMIN_EMAIL não configurado." }, { status: 500 });
+  }
+
   const supabaseAdmin = getSupabaseAdmin();
   if (!supabaseAdmin) {
     return NextResponse.json(

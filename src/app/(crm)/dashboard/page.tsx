@@ -1,9 +1,10 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { gerarMensagemPrimeiroAtendimento } from "@/lib/auto-atendimento";
 import { 
   LogOut, 
   LayoutDashboard, 
@@ -19,7 +20,6 @@ import {
   AlertOctagon,
   ChevronRight,
   ChevronLeft,
-  MoreHorizontal,
   Trash2,
   X,
   Phone,
@@ -30,10 +30,13 @@ import {
   ShieldCheck,
   TrendingUp,
 } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
 import type { Lead } from "@/types";
 
+type WebkitAudioWindow = Window & { webkitAudioContext?: typeof AudioContext };
+
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [novosIds, setNovosIds] = useState<Set<string>>(new Set());
@@ -44,8 +47,47 @@ export default function DashboardPage() {
   const [permNotificacao, setPermNotificacao] = useState<NotificationPermission>('default');
   const [toastLead, setToastLead] = useState<Lead | null>(null);
   const [slugTenant, setSlugTenant] = useState<string | null>(null);
+  const [nomeTenant, setNomeTenant] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+
+  function tocarSom() {
+    try {
+      const typedWindow = window as WebkitAudioWindow;
+      const AudioCtx = window.AudioContext || typedWindow.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const tocar = (freq: number, start: number, duracao: number, volume = 0.35) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duracao);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + duracao);
+      };
+      tocar(880, 0, 0.25);
+      tocar(1100, 0.2, 0.35);
+    } catch {
+      // silencia erros de autoplay
+    }
+  }
+
+  function mostrarNotificacaoBrowser(lead: Lead) {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    const n = new Notification('\uD83D\uDD14 Novo lead chegou!', {
+      body: `${lead.nome} \u2022 ${lead.telefone}${lead.ia_score ? ` \u2022 Score IA: ${lead.ia_score}` : ''}`,
+      icon: '/favicon.ico',
+      tag: 'novo-lead-jurisleads',
+      requireInteraction: true,
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+  }
 
   useEffect(() => {
     let currentSlug: string | null = null;
@@ -59,16 +101,23 @@ export default function DashboardPage() {
 
       setUser(session.user);
 
-      // Busca o slug do tenant deste usuário
+      // Busca o slug e nome do tenant deste usuário
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('slug')
+        .select('slug, nome, ativo')
         .eq('user_id', session.user.id)
         .single();
+
+      if (tenant && tenant.ativo === false) {
+        await supabase.auth.signOut();
+        router.push('/login?blocked=1');
+        return;
+      }
 
       const slugFiltro = tenant?.slug ?? null;
       currentSlug = slugFiltro;
       setSlugTenant(slugFiltro);
+      setNomeTenant(tenant?.nome ?? null);
 
       if (!slugFiltro) {
         setLeads([]);
@@ -116,42 +165,7 @@ export default function DashboardPage() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
-
-  const tocarSom = () => {
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const tocar = (freq: number, start: number, duracao: number, volume = 0.35) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(0, ctx.currentTime + start);
-        gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + start + 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duracao);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + duracao);
-      };
-      tocar(880, 0, 0.25);
-      tocar(1100, 0.2, 0.35);
-    } catch { /* silencia erros de autoplay */ }
-  };
-
-  const mostrarNotificacaoBrowser = (lead: Lead) => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-    const n = new Notification('\uD83D\uDD14 Novo lead chegou!', {
-      body: `${lead.nome} \u2022 ${lead.telefone}${lead.ia_score ? ` \u2022 Score IA: ${lead.ia_score}` : ''}`,
-      icon: '/favicon.ico',
-      tag: 'novo-lead-jurisleads',
-      requireInteraction: true,
-    });
-    n.onclick = () => { window.focus(); n.close(); };
-  };
+  }, [router, supabase]);
 
   const pedirPermissaoNotificacao = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
@@ -226,10 +240,10 @@ export default function DashboardPage() {
             <Users className="w-5 h-5 shrink-0 text-slate-400" />
             {sidebarAberta && <span className="ml-3 whitespace-nowrap">Clientes</span>}
           </a>
-          <a href="/configuracoes" title="Configurações" className={`flex items-center py-3 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-all font-bold text-sm text-slate-500 ${sidebarAberta ? 'px-4' : 'px-0 justify-center'}`}>
+          <Link href="/configuracoes" title="Configurações" className={`flex items-center py-3 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-all font-bold text-sm text-slate-500 ${sidebarAberta ? 'px-4' : 'px-0 justify-center'}`}>
             <Settings className="w-5 h-5 shrink-0 text-slate-400" />
             {sidebarAberta && <span className="ml-3 whitespace-nowrap">Configurações</span>}
-          </a>
+          </Link>
         </nav>
 
         {/* Toggle */}
@@ -251,8 +265,8 @@ export default function DashboardPage() {
             </div>
             {sidebarAberta && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-900 font-bold truncate">{user?.email}</p>
-                <p className="text-[11px] text-slate-500 font-medium">Advogado Associado</p>
+                <p className="text-sm text-slate-900 font-bold truncate">{nomeTenant || user?.email}</p>
+                <p className="text-[11px] text-slate-500 font-medium truncate">{nomeTenant ? user?.email : 'Advogado Associado'}</p>
               </div>
             )}
           </div>
@@ -452,11 +466,7 @@ function LeadCard({ lead, onMover, onDelete, onOpen, onDragStart, isNovo }: {
   onDragStart: (id: string) => void;
   isNovo?: boolean;
 }) {
-  const isDragging = { current: false };
-  const isToday = new Date(lead.created_at).toDateString() === new Date().toDateString();
-  const dataFormatada = new Date(lead.created_at).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: 'short', hour: isToday ? '2-digit' : undefined, minute: isToday ? '2-digit' : undefined
-  });
+  const isDragging = useRef(false);
 
   const idxAtual = STATUS_ORDER.indexOf(lead.status);
   const proximoStatus = STATUS_ORDER[idxAtual + 1] as Lead['status'] | undefined;
@@ -469,7 +479,8 @@ function LeadCard({ lead, onMover, onDelete, onOpen, onDragStart, isNovo }: {
   const scoreColor = scoreColors[lead.ia_score] ?? scoreColors['Frio'];
 
   const telefoneNumerico = lead.telefone.replace(/\D/g, '');
-  const whatsappUrl = `https://wa.me/55${telefoneNumerico}`;
+  const mensagemAutoAtendimento = gerarMensagemPrimeiroAtendimento(lead);
+  const whatsappUrl = `https://wa.me/55${telefoneNumerico}?text=${encodeURIComponent(mensagemAutoAtendimento)}`;
 
   return (
     <div
@@ -511,7 +522,7 @@ function LeadCard({ lead, onMover, onDelete, onOpen, onDragStart, isNovo }: {
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
-              title="WhatsApp"
+              title="WhatsApp com primeiro atendimento"
             >
               <MessageCircle className="w-3.5 h-3.5" />
             </a>
@@ -561,7 +572,8 @@ function LeadModal({
   const statusAnterior = STATUS_ORDER[idxAtual - 1] as Lead['status'] | undefined;
 
   const telefoneNumerico = lead.telefone.replace(/\D/g, '');
-  const whatsappUrl = `https://wa.me/55${telefoneNumerico}`;
+  const mensagemAutoAtendimento = gerarMensagemPrimeiroAtendimento(lead);
+  const whatsappUrl = `https://wa.me/55${telefoneNumerico}?text=${encodeURIComponent(mensagemAutoAtendimento)}`;
 
   let pontosFortesParsed: string[] = [];
   try { if (lead.pontos_fortes) pontosFortesParsed = JSON.parse(lead.pontos_fortes); } catch { /* noop */ }

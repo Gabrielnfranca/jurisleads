@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
 import {
   Scale, ArrowLeft, Bell, Send, Mail, Check, Eye, EyeOff,
-  Loader2, ChevronDown, ChevronUp, ExternalLink, Smartphone
+  Loader2, ChevronDown, ChevronUp, ExternalLink, Smartphone, MessageCircle, Bot
 } from "lucide-react";
 
 function Passo({ n, texto, destaque }: { n: number; texto: string; destaque?: string }) {
@@ -41,7 +41,7 @@ function Tutorial({ title, children }: { title: string; children: React.ReactNod
 
 export default function ConfiguracoesPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -60,6 +60,13 @@ export default function ConfiguracoesPage() {
   const [emailAtivo, setEmailAtivo] = useState(false);
   const [showResendKey, setShowResendKey] = useState(false);
 
+  // Evolution API (Robô WhatsApp automático)
+  type EvolutionStatus = 'idle' | 'not_configured' | 'not_created' | 'loading_qr' | 'waiting_scan' | 'open' | 'close' | 'error';
+  const [evolutionStatus, setEvolutionStatus] = useState<EvolutionStatus>('idle');
+  const [evolutionAtivo, setEvolutionAtivo] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+
   const [testando, setTestando] = useState<"telegram" | "email" | null>(null);
   const [testMsg, setTestMsg] = useState<{ canal: string; ok: boolean; msg: string } | null>(null);
 
@@ -67,6 +74,19 @@ export default function ConfiguracoesPage() {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push("/login"); return; }
+
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("ativo")
+        .eq("user_id", session.user.id)
+        .maybeSingle<{ ativo: boolean }>();
+
+      if (tenant && tenant.ativo === false) {
+        await supabase.auth.signOut();
+        router.push("/login?blocked=1");
+        return;
+      }
+
       setUserId(session.user.id);
 
       const { data } = await supabase
@@ -82,14 +102,45 @@ export default function ConfiguracoesPage() {
         setResendKey(data.resend_api_key ?? "");
         setResendEmail(data.resend_email ?? "");
         setEmailAtivo(data.email_ativo ?? false);
+        setEvolutionAtivo(data.evolution_ativo ?? false);
       }
+
+      // Verifica status da conexão Evolution
+      const evRes = await fetch('/api/crm/whatsapp').catch(() => null);
+      if (evRes) {
+        const evData = await evRes.json();
+        setEvolutionStatus(evData.status ?? 'not_created');
+      }
+
       setLoading(false);
     };
     load();
-  }, []);
+  }, [router, supabase]);
+
+  // Polling: verifica conexão enquanto aguarda o scan do QR
+  useEffect(() => {
+    if (evolutionStatus !== 'waiting_scan') return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/crm/whatsapp');
+        const data = await res.json();
+        if (data.connected || data.status === 'open') {
+          setEvolutionStatus('open');
+          setQrCode(null);
+          setEvolutionAtivo(true);
+          fetch('/api/crm/whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'save_active', ativo: true }),
+          });
+        }
+      } catch { /* ignora */ }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [evolutionStatus]);
 
   const salvar = async () => {
-    if (!userId) return;
+    if (!userId || !supabase) return;
     setSalvando(true);
     const payload = {
       user_id: userId,
@@ -99,6 +150,7 @@ export default function ConfiguracoesPage() {
       resend_api_key: resendKey.trim(),
       resend_email: resendEmail.trim(),
       email_ativo: emailAtivo,
+      evolution_ativo: evolutionAtivo,
     };
     await supabase.from("notificacoes_config").upsert(payload, { onConflict: "user_id" });
     setSalvando(false);
@@ -130,6 +182,39 @@ export default function ConfiguracoesPage() {
       setTestMsg({ canal, ok: false, msg: "Erro de conexão." });
     }
     setTestando(null);
+  };
+
+  const carregarQr = async () => {
+    setQrLoading(true);
+    setEvolutionStatus('loading_qr');
+    try {
+      const res = await fetch('/api/crm/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'connect' }),
+      });
+      const data = await res.json();
+      if (data.qr) {
+        setQrCode(data.qr);
+        setEvolutionStatus('waiting_scan');
+      } else {
+        setEvolutionStatus('error');
+      }
+    } catch {
+      setEvolutionStatus('error');
+    }
+    setQrLoading(false);
+  };
+
+  const desconectarEvolution = async () => {
+    await fetch('/api/crm/whatsapp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'disconnect' }),
+    });
+    setEvolutionStatus('not_created');
+    setQrCode(null);
+    setEvolutionAtivo(false);
   };
 
   if (loading) {
@@ -350,6 +435,134 @@ export default function ConfiguracoesPage() {
                 {testMsg.ok && <Check className="w-4 h-4" />} {testMsg.msg}
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Robô de Atendimento WhatsApp */}
+        <div className="bg-white rounded-3xl border-2 border-slate-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+            <div className="flex items-center gap-4">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-colors ${evolutionStatus === 'open' ? 'bg-emerald-50' : 'bg-slate-50'}`}>
+                <Bot className={`w-5 h-5 transition-colors ${evolutionStatus === 'open' ? 'text-emerald-600' : 'text-slate-400'}`} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-black text-slate-900">Robô de 1º Atendimento</h2>
+                  {evolutionStatus === 'open'
+                    ? <span className="text-[10px] uppercase tracking-widest font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">Conectado</span>
+                    : <span className="text-[10px] uppercase tracking-widest font-black text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">Automático</span>
+                  }
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">WhatsApp automático • Dispara assim que o lead chega</p>
+              </div>
+            </div>
+            {evolutionStatus === 'open' && (
+              <button
+                onClick={() => setEvolutionAtivo(v => !v)}
+                className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${evolutionAtivo ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                title={evolutionAtivo ? 'Pausar robô' : 'Ativar robô'}
+              >
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${evolutionAtivo ? 'translate-x-7' : 'translate-x-1'}`} />
+              </button>
+            )}
+          </div>
+
+          <div className="p-6 space-y-5">
+
+            {/* Não configurado pelo admin */}
+            {evolutionStatus === 'not_configured' && (
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-xs text-amber-700 font-medium leading-relaxed">
+                O servidor de WhatsApp ainda não foi habilitado neste plano. Entre em contato com o suporte para ativar.
+              </div>
+            )}
+
+            {/* Conectado */}
+            {evolutionStatus === 'open' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-emerald-800">WhatsApp conectado!</p>
+                    <p className="text-xs text-emerald-600 font-medium mt-0.5">
+                      {evolutionAtivo
+                        ? 'O robô está ativo e enviará mensagem automática a cada novo lead.'
+                        : 'Robô pausado. Ative o toggle ao lado para retomar.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={desconectarEvolution}
+                  className="flex items-center gap-2 text-sm font-bold text-red-500 hover:text-red-600 hover:bg-red-50 px-3 py-2 rounded-xl transition-colors border border-red-100"
+                >
+                  Desconectar WhatsApp
+                </button>
+              </div>
+            )}
+
+            {/* Gerando QR */}
+            {evolutionStatus === 'loading_qr' && (
+              <div className="flex flex-col items-center gap-3 py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                <p className="text-sm font-bold text-slate-500">Gerando QR Code...</p>
+              </div>
+            )}
+
+            {/* Aguardando scan */}
+            {evolutionStatus === 'waiting_scan' && qrCode && (
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+                  <p className="text-sm font-black text-blue-800 mb-2">Escaneie com seu WhatsApp</p>
+                  <ol className="text-xs text-blue-700 font-medium space-y-1 list-decimal list-inside leading-relaxed">
+                    <li>Abra o WhatsApp no celular</li>
+                    <li>Toque nos 3 pontinhos (⋮) → <strong>Aparelhos conectados</strong></li>
+                    <li>Toque em <strong>Conectar um aparelho</strong></li>
+                    <li>Aponte a câmera para o QR abaixo</li>
+                  </ol>
+                </div>
+                <div className="flex flex-col items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrCode} alt="QR Code WhatsApp" className="w-52 h-52 rounded-2xl border-2 border-slate-100 shadow" />
+                  <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Aguardando conexão...
+                  </div>
+                  <button onClick={carregarQr} disabled={qrLoading} className="text-xs text-blue-600 hover:underline font-bold disabled:opacity-40">
+                    ↺ Atualizar QR Code
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Não conectado */}
+            {(evolutionStatus === 'idle' || evolutionStatus === 'not_created' || evolutionStatus === 'close' || evolutionStatus === 'error') && (
+              <div className="space-y-4">
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex gap-3">
+                  <MessageCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-black text-slate-800 mb-1">Como funciona?</p>
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                      Conecte seu WhatsApp uma única vez. Depois, cada lead que chegar recebe automaticamente uma mensagem de triagem — sem você precisar fazer nada.
+                    </p>
+                  </div>
+                </div>
+                {evolutionStatus === 'error' && (
+                  <p className="text-xs text-red-600 font-bold bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                    Não foi possível gerar o QR Code. Verifique sua conexão e tente novamente.
+                  </p>
+                )}
+                <button
+                  onClick={carregarQr}
+                  disabled={qrLoading}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl transition-colors shadow-lg shadow-emerald-500/20 disabled:opacity-60"
+                >
+                  {qrLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                  Conectar WhatsApp
+                </button>
+              </div>
+            )}
+
           </div>
         </div>
 

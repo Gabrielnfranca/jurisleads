@@ -13,6 +13,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blockedByStatus] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("blocked") === "1"
+  );
   const router = useRouter();
   const supabase = createClient();
 
@@ -30,6 +33,25 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user?.id) {
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("ativo")
+          .eq("user_id", session.user.id)
+          .maybeSingle<{ ativo: boolean }>();
+
+        if (tenant && !tenant.ativo) {
+          await supabase.auth.signOut();
+          setError("Sua conta foi desativada. Entre em contato com a administração.");
+          setLoading(false);
+          return;
+        }
+      }
+
       router.push("/dashboard");
     }
   };
@@ -120,6 +142,12 @@ export default function LoginPage() {
             {error && (
               <div className="p-4 bg-red-50 border-2 border-red-200 text-red-600 text-sm font-bold rounded-2xl flex items-center gap-2">
                  <span>{error}</span>
+              </div>
+            )}
+
+            {!error && blockedByStatus && (
+              <div className="p-4 bg-amber-50 border-2 border-amber-200 text-amber-700 text-sm font-bold rounded-2xl flex items-center gap-2">
+                <span>Seu acesso ao CRM está temporariamente suspenso.</span>
               </div>
             )}
 

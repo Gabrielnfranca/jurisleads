@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Lead } from "@/types";
+import { gerarMensagemPrimeiroAtendimento } from "@/lib/auto-atendimento";
 
 interface NotificacaoConfig {
   user_id: string;
@@ -12,11 +13,53 @@ interface NotificacaoConfig {
   email_ativo: boolean;
   resend_api_key: string | null;
   resend_email: string | null;
+  evolution_ativo: boolean;
 }
 
 interface TenantOwner {
   user_id: string;
   ativo: boolean;
+  nome: string;
+}
+
+async function dispararWebhookAutoAtendimento(params: {
+  webhookUrl: string;
+  webhookSecret?: string;
+  lead: Lead;
+  tenantNome: string;
+}) {
+  const mensagem = gerarMensagemPrimeiroAtendimento(params.lead, params.tenantNome);
+
+  const response = await fetch(params.webhookUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(params.webhookSecret ? { "x-autoatendimento-secret": params.webhookSecret } : {}),
+    },
+    body: JSON.stringify({
+      event: "lead.first_contact",
+      lead: {
+        id: params.lead.id,
+        slug: params.lead.slug,
+        nome: params.lead.nome,
+        telefone: params.lead.telefone,
+        ia_score: params.lead.ia_score,
+        situacao: params.lead.situacao,
+        motivo: params.lead.motivo,
+        tempo: params.lead.tempo,
+      },
+      tenant: { nome: params.tenantNome },
+      roteiro: {
+        canal: "whatsapp",
+        mensagem,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Webhook autoatendimento falhou (${response.status}): ${body}`);
+  }
 }
 
 // Cliente admin (service role) para leitura segura das configs
@@ -53,6 +96,33 @@ async function enviarTelegram(token: string, chatId: string, texto: string) {
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err?.description ?? "Erro ao enviar Telegram");
+  }
+}
+
+// ─── WhatsApp via Evolution API ──────────────────────────────────────────────
+async function enviarWhatsAppEvolution(instanceName: string, telefone: string, mensagem: string) {
+  const evolutionUrl = process.env.EVOLUTION_API_URL?.replace(/\/$/, "");
+  const evolutionKey = process.env.EVOLUTION_API_KEY;
+
+  if (!evolutionUrl || !evolutionKey) {
+    throw new Error("Evolution API não configurada no servidor.");
+  }
+
+  const numero = telefone.replace(/\D/g, "");
+  const numeroFinal = numero.startsWith("55") ? numero : `55${numero}`;
+
+  const res = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": evolutionKey,
+    },
+    body: JSON.stringify({ number: numeroFinal, text: mensagem }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Evolution API erro (${res.status}): ${err}`);
   }
 }
 
@@ -139,8 +209,14 @@ export async function POST(req: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Opcional: valida segredo do webhook quando configurado em produção.
-    const webhookSecret = process.env.NOTIFY_WEBHOOK_SECRET;
+    // Em produção, o segredo do webhook é obrigatório para evitar abuso externo.
+    const webhookSecret = process.env.NOTIFY_WEBHOOK_SECRET?.trim();
+    const isProd = process.env.NODE_ENV === "production";
+
+    if (isProd && !webhookSecret) {
+      return NextResponse.json({ message: "NOTIFY_WEBHOOK_SECRET não configurado." }, { status: 500 });
+    }
+
     if (webhookSecret) {
       const providedSecret = req.headers.get("x-webhook-secret");
       if (providedSecret !== webhookSecret) {
@@ -151,7 +227,7 @@ export async function POST(req: NextRequest) {
     // Resolve o owner do tenant para evitar envio cruzado entre escritórios.
     const { data: tenant, error: tenantError } = await supabase
       .from("tenants")
-      .select("user_id, ativo")
+      .select("user_id, ativo, nome")
       .eq("slug", lead.slug)
       .single<TenantOwner>();
 
@@ -166,7 +242,7 @@ export async function POST(req: NextRequest) {
     // Busca apenas a configuração do dono do tenant do lead.
     const { data: config, error: configError } = await supabase
       .from("notificacoes_config")
-      .select("user_id, telegram_ativo, telegram_token, telegram_chat_id, email_ativo, resend_api_key, resend_email")
+      .select("user_id, telegram_ativo, telegram_token, telegram_chat_id, email_ativo, resend_api_key, resend_email, evolution_ativo")
       .eq("user_id", tenant.user_id)
       .maybeSingle<NotificacaoConfig>();
 
@@ -198,6 +274,35 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         const message = e instanceof Error ? e.message : "Erro desconhecido";
         erros.push(`Email: ${message}`);
+      }
+    }
+
+    // ── WhatsApp automático via Evolution API ──
+    if (config.evolution_ativo) {
+      try {
+        const mensagemAutoAtendimento = gerarMensagemPrimeiroAtendimento(lead, tenant.nome);
+        // A instância da Evolution é o slug do tenant
+        await enviarWhatsAppEvolution(lead.slug, lead.telefone, mensagemAutoAtendimento);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Erro desconhecido";
+        erros.push(`WhatsApp: ${message}`);
+      }
+    }
+
+    const autoWebhookUrl = process.env.AUTOATENDIMENTO_WEBHOOK_URL?.trim();
+    const autoWebhookSecret = process.env.AUTOATENDIMENTO_WEBHOOK_SECRET?.trim();
+
+    if (autoWebhookUrl) {
+      try {
+        await dispararWebhookAutoAtendimento({
+          webhookUrl: autoWebhookUrl,
+          webhookSecret: autoWebhookSecret,
+          lead,
+          tenantNome: tenant.nome,
+        });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Erro desconhecido";
+        erros.push(`Autoatendimento: ${message}`);
       }
     }
 
