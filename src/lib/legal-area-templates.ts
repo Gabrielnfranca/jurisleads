@@ -9,6 +9,12 @@ export type LegalAreaType =
   | "imobiliario"
   | "civil";
 
+export interface Testimonial {
+  nome: string;
+  cargo: string;
+  texto: string;
+}
+
 export interface AreaTemplate {
   heroBadge: string;
   heroTitle: string;
@@ -349,6 +355,84 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
     ],
   },
 };
+
+const TESTIMONIALS_BY_AREA: Record<LegalAreaType, Testimonial[]> = {
+  trabalhista: [
+    { nome: "Rafael Costa", cargo: "Motorista de App", texto: "Achei que tinham pagado tudo certo. Faltava muito sobre hora extra." },
+    { nome: "Juliana Miranda", cargo: "Atendente", texto: "Meu FGTS não estava sendo depositado e eu nem sabia. Resolveram tudo rápido." },
+    { nome: "Marcos Silva", cargo: "Vendedor", texto: "Descobri valores atrasados na rescisão e recuperei o que era meu." },
+    { nome: "Ana Beatriz", cargo: "Enfermeira", texto: "O escritório explicou meus direitos trabalhistas de forma simples e clara." },
+    { nome: "Carlos Eduardo", cargo: "Operador de Máquinas", texto: "Consegui cobrar adicional que a empresa nunca pagava." },
+    { nome: "Patricia Leite", cargo: "Recepcionista", texto: "Não precisei ir ao escritório. Fiz tudo online e recebi orientação excelente." },
+  ],
+  previdenciario: [
+    { nome: "João Batista", cargo: "Aposentando", texto: "O INSS tinha negado meu pedido e eles conseguiram reverter." },
+    { nome: "Maria Helena", cargo: "Auxiliar de Serviços", texto: "Reconheceram vínculos antigos e consegui aumentar o tempo de contribuição." },
+    { nome: "Paulo Mendes", cargo: "Vigilante", texto: "Consegui aposentadoria especial depois de anos tentando sozinho." },
+    { nome: "Sueli Nunes", cargo: "Costureira", texto: "Recebi orientação certa sobre documentos e o benefício saiu." },
+    { nome: "Claudio Ferreira", cargo: "Pedreiro", texto: "Eles acharam períodos que não estavam no CNIS e isso mudou tudo." },
+    { nome: "Eliane Rocha", cargo: "Cuidadora", texto: "Consegui benefício por incapacidade com atendimento humano e rápido." },
+  ],
+  consumidor: [
+    { nome: "Bruna Oliveira", cargo: "Compradora Online", texto: "Comprei um produto com defeito e não queriam devolver. Recebi meu dinheiro de volta." },
+    { nome: "Ricardo Prado", cargo: "Autônomo", texto: "Cancelaram serviço sem aviso e ainda cobraram multa. Ganhei indenização." },
+    { nome: "Larissa Souza", cargo: "Estudante", texto: "Fui cobrada duas vezes no cartão. Resolveram rápido e com juros." },
+    { nome: "Daniel Alves", cargo: "Analista", texto: "A empresa não cumpriu a oferta e tive meu direito reconhecido." },
+    { nome: "Camila Brito", cargo: "Microempreendedora", texto: "Recuperei valores de cobrança indevida que já tinha dado como perdidos." },
+    { nome: "Fernando Lima", cargo: "Professor", texto: "Atendimento prático. Consegui acordo justo com a operadora." },
+  ],
+  familia: [
+    { nome: "Renata Campos", cargo: "Mãe", texto: "Regularizei pensão dos meus filhos com segurança e sem desgaste excessivo." },
+    { nome: "Gustavo Pereira", cargo: "Pai", texto: "Conseguimos guarda compartilhada com um acordo equilibrado." },
+    { nome: "Fabiana Moraes", cargo: "Administradora", texto: "Minha separação foi conduzida com respeito e clareza em cada etapa." },
+    { nome: "Leandro Siqueira", cargo: "Comerciante", texto: "Resolveram conflito de herança que travava a família havia anos." },
+    { nome: "Priscila Torres", cargo: "Servidora", texto: "Fui orientada sobre visitas e alimentos de forma muito humana." },
+    { nome: "Eduardo Gonçalves", cargo: "Empresário", texto: "Consegui acordo rápido de partilha sem transformar tudo em guerra." },
+  ],
+  criminal: [
+    { nome: "Thiago Ramos", cargo: "Representante Comercial", texto: "Atuaram com urgência e garantiram minha defesa desde o primeiro dia." },
+    { nome: "Igor Martins", cargo: "Motorista", texto: "Consegui liberdade provisória com estratégia rápida e eficiente." },
+    { nome: "Vanessa Almeida", cargo: "Comerciante", texto: "Explicaram todo o processo criminal com transparência e firmeza." },
+    { nome: "Rodrigo Teixeira", cargo: "Autônomo", texto: "Me senti protegido durante a investigação e tive o caso bem conduzido." },
+    { nome: "Carolina Farias", cargo: "Estudante", texto: "Equipe muito técnica. Defenderam meus direitos em cada audiência." },
+    { nome: "Mateus Barros", cargo: "Técnico", texto: "Conseguimos um resultado muito melhor do que eu imaginava." },
+  ],
+  tributario: [
+    { nome: "Marcelo Vieira", cargo: "Empresário", texto: "Reduzimos cobrança indevida e regularizamos pendências fiscais." },
+    { nome: "Aline Rezende", cargo: "Contadora", texto: "Contestaram multa abusiva e a empresa economizou bastante." },
+    { nome: "Roberto Pacheco", cargo: "MEI", texto: "Eu pagava imposto errado há meses. Ajustaram tudo e recuperamos valores." },
+    { nome: "Viviane Duarte", cargo: "Gestora Financeira", texto: "Resolveram autuação complexa com estratégia técnica excelente." },
+    { nome: "Felipe Araujo", cargo: "Comerciante", texto: "Conseguimos suspender cobrança enquanto o processo corria." },
+    { nome: "Livia Cardoso", cargo: "Profissional Liberal", texto: "Atendimento objetivo e economia real na revisão tributária." },
+  ],
+  imobiliario: [
+    { nome: "Andressa Mota", cargo: "Proprietária", texto: "Consegui resolver inadimplência de aluguel com apoio jurídico completo." },
+    { nome: "Carlos Henrique", cargo: "Corretor", texto: "Revisaram contrato com cláusulas abusivas e evitamos grande prejuízo." },
+    { nome: "Mirela Santos", cargo: "Investidora", texto: "Tive suporte total em disputa de compra e venda de imóvel." },
+    { nome: "João Victor", cargo: "Locador", texto: "Processo de despejo foi conduzido com segurança e dentro da lei." },
+    { nome: "Natália Pires", cargo: "Arquiteta", texto: "Resolveram problema com construtora e recebi a indenização correta." },
+    { nome: "Rogério Silva", cargo: "Síndico", texto: "Equipe ágil para tratar conflitos condominiais e cobranças." },
+  ],
+  civil: [
+    { nome: "Beatriz Freitas", cargo: "Empreendedora", texto: "Quebra de contrato me causou prejuízo e consegui reparação." },
+    { nome: "Henrique Lopes", cargo: "Consultor", texto: "Ganhei ação de cobrança com orientação clara desde o início." },
+    { nome: "Tatiane Dias", cargo: "Professora", texto: "Resolveram meu caso de dano moral com condução muito profissional." },
+    { nome: "Rafael Nogueira", cargo: "Comerciante", texto: "Fizeram uma estratégia eficiente para execução de dívida antiga." },
+    { nome: "Juliana Prado", cargo: "Designer", texto: "Consegui acordo justo sem prolongar o conflito civil." },
+    { nome: "Caio Mendes", cargo: "Analista", texto: "Atendimento ágil e técnico para revisão contratual complexa." },
+  ],
+};
+
+function normalizeTestimonials(items: Testimonial[], count = 12): Testimonial[] {
+  if (!items.length) return [];
+  return Array.from({ length: count }, (_, index) => items[index % items.length]);
+}
+
+export function getAreaTestimonials(area: string | undefined, count = 12): Testimonial[] {
+  const normalized = (area?.toLowerCase() || "trabalhista") as LegalAreaType;
+  const testimonials = TESTIMONIALS_BY_AREA[normalized] || TESTIMONIALS_BY_AREA.trabalhista;
+  return normalizeTestimonials(testimonials, count);
+}
 
 export function getAreaTemplate(area: string | undefined): AreaTemplate {
   const normalized = (area?.toLowerCase() || "trabalhista") as LegalAreaType;

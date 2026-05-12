@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState, useEffect, useRef, type SVGProps } from "react";
-import { getAreaTemplate, type LegalAreaType } from "@/lib/legal-area-templates";
+import { getAreaTemplate, getAreaTestimonials, type LegalAreaType, type Testimonial } from "@/lib/legal-area-templates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,21 +25,6 @@ import {
 } from "lucide-react";
 
 const STEPS = 5;
-
-const DEPOIMENTOS = [
-  { nome: "Rafael Costa", cargo: "Motorista de App", texto: "Achei que tinham pagado tudo certo. Faltava muito sobre hora extra." },
-  { nome: "Juliana Miranda", cargo: "Atendente", texto: "Super profissionais! O advogado me chamou no WhatsApp. Meu FGTS não estava sendo depositado." },
-  { nome: "Marcos Silva", cargo: "Vendedor", texto: "Sem burocracia nenhuma. Descobri R$ 4.500 atrasados." },
-  { nome: "Ana Beatriz", cargo: "Enfermeira", texto: "A inteligência artificial acertou em cheio as minhas dúvidas, muito prático." },
-  { nome: "Carlos Eduardo", cargo: "Operador de Máquinas", texto: "Excelente! Não precisei pisar em escritório de advocacia." },
-  { nome: "Patricia Leite", cargo: "Recepcionista", texto: "Achei que processar me daria dor de cabeça, mas foi super amigável e rápido." },
-  { nome: "Lucas Mendes", cargo: "Analista", texto: "Fui mandado embora na pandemia e achei que tinha perdido os prazos." },
-  { nome: "Renata Nunes", cargo: "Gerente", texto: "Fazia papel de liderança e constataram adicional de cargo de confiança que nunca recebi." },
-  { nome: "Felipe Dias", cargo: "Ajudante Geral", texto: "Meu patrão nunca pagou periculosidade. Já assinei a procuração pelo celular mesmo." },
-  { nome: "Fernanda Lima", cargo: "Caixa", texto: "Trabalhava 10 horas por dia e pagavam só 8. Resolveram." },
-  { nome: "Roberto Alves", cargo: "Logística", texto: "Cálculo muito detalhado na hora de me explicarem por áudio no whats." },
-  { nome: "Camila Rodrigues", cargo: "Telemarketing", texto: "Não cobraram nada antecipado. Melhor experiência jurídica que já tive." }
-];
 
 type OptionCardProps = {
   label: string;
@@ -116,7 +101,7 @@ function BotIcon({ className = "" }: { className?: string }) {
   return <div className={className}>🤖</div>;
 }
 
-function TestimonialsCarousel() {
+function TestimonialsCarousel({ testimonials, specialization }: { testimonials: Testimonial[]; specialization: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const pausedRef = useRef(false);
@@ -124,7 +109,7 @@ function TestimonialsCarousel() {
   const startX = useRef(0);
   const startScrollLeft = useRef(0);
 
-  const allCards = [...DEPOIMENTOS, ...DEPOIMENTOS];
+  const allCards = [...testimonials, ...testimonials];
 
   useEffect(() => {
     const el = containerRef.current;
@@ -179,7 +164,7 @@ function TestimonialsCarousel() {
             </div>
           </div>
           <h3 className="text-3xl lg:text-4xl font-extrabold text-slate-800 tracking-tight">Avaliações de Clientes no Google</h3>
-          <p className="text-lg md:text-xl text-slate-500 mt-2 font-medium">Veja o que dizem os clientes que ajudamos.</p>
+          <p className="text-lg md:text-xl text-slate-500 mt-2 font-medium">Veja o que dizem nossos clientes em {specialization}.</p>
         </div>
       </div>
 
@@ -654,7 +639,10 @@ export default function LandingPageDinamica({
           </div>
         </section>
 
-        <TestimonialsCarousel />
+        <TestimonialsCarousel
+          testimonials={getAreaTestimonials(areaJuridica)}
+          specialization={template.specialization}
+        />
 
         <section className="py-24 relative z-10 bg-white">
           <div className="max-w-4xl mx-auto px-6">
