@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 // Importar templates padrão como fallback
 import { AREA_TEMPLATES } from "@/lib/legal-area-templates";
 
-const MAX_FAQ_ITEMS = 3;
+const MAX_FAQ_ITEMS = 6;
 
 export async function GET(req: Request) {
   try {
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
       });
     }
 
-    // Se há menos de 3 perguntas, adiciona as padrão
+    // Se há menos de 6 perguntas, adiciona as padrão
     let faqItems = (suggestions || [])
       .slice(0, MAX_FAQ_ITEMS)
       .map((s: { question: string; vote_count: number }, i: number) => ({
@@ -51,7 +51,7 @@ export async function GET(req: Request) {
         answer: `Resposta baseada em dúvidas frequentes de clientes. (${i + 1})`, // Placeholder para IA gerar
       }));
 
-    // Se não tem 3, completa com as padrão
+    // Se não tem 6, completa com as padrão
     const template = AREA_TEMPLATES[legal_area as keyof typeof AREA_TEMPLATES];
     if (faqItems.length < MAX_FAQ_ITEMS && template?.faqItems) {
       const defaultItems = template.faqItems.slice(0, MAX_FAQ_ITEMS - faqItems.length);

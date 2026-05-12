@@ -648,7 +648,7 @@ export default function LandingPageDinamica({
           <div className="max-w-4xl mx-auto px-6">
              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-12 text-center tracking-tight">Dúvidas Frequentes</h2>
              <div className="space-y-5">
-                {(dynamicFaqItems || template.faqItems).slice(0, 3).map((item, idx) => (
+                {(dynamicFaqItems || template.faqItems).slice(0, 6).map((item, idx) => (
                   <FaqItem key={idx} question={item.question} answer={item.answer} />
                 ))}
              </div>

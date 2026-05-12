@@ -78,6 +78,9 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { question: "Vou ter que pagar para fazer a análise do meu caso?", answer: "De maneira nenhuma! A análise inicial via nossa tecnologia e a consulta com o advogado especialista são 100% gratuitas." },
       { question: "Estou em outro estado, preciso ir a um escritório físico?", answer: "Não, nosso atendimento é totalmente online perante todos os tribunais do Brasil (TRT). Você tira dúvidas, assina procurações e envia documentos, tudo pelo seu próprio celular com segurança." },
       { question: "Meus dados estão protegidos de verdade?", answer: "Completamente. Operamos em estrita concordância com a Lei Geral de Proteção de Dados (LGPD) e com o código rigoroso da OAB. Toda informação trafegada é criptografada." },
+      { question: "Ainda estou empregado(a), posso entrar com ação?", answer: "Pode sim. Cada caso é avaliado com estratégia para reduzir riscos e preservar provas durante o vínculo." },
+      { question: "Quanto tempo tenho para cobrar direitos trabalhistas?", answer: "Em regra, até 2 anos após o fim do contrato, cobrando os últimos 5 anos. Avaliamos seu prazo exato na triagem." },
+      { question: "Se eu não tiver todos os documentos, ainda consigo processar?", answer: "Na maioria dos casos, sim. Holerites, conversas, testemunhas e perícias podem complementar a prova." },
     ],
   },
 
@@ -117,6 +120,9 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { question: "Qual é o prazo para conseguir a aposentadoria?", answer: "Depende da sua situação. Podem ser meses ou poucos anos, dependendo se é administrativo ou judicial. Vamos te dar prazos realistas após análise." },
       { question: "Posso estar trabalhando e processar aposentadoria?", answer: "Sim! Você pode estar trabalhando normalmente. O processo segue em paralelo sem interferências." },
       { question: "Quanto custa manter uma ação previdenciária?", answer: "Cobramos apenas se ganharmos. Você só paga quando recebe as parcelas atrasadas." },
+      { question: "Posso somar tempo rural, especial ou militar?", answer: "Em muitos casos, sim. Esses períodos podem antecipar a aposentadoria quando comprovados corretamente." },
+      { question: "Meu CNIS está incompleto. Isso impede meu pedido?", answer: "Não impede. Fazemos acerto de vínculos e inclusão de contribuições com documentos e requerimentos técnicos." },
+      { question: "Quem já teve benefício negado pode tentar de novo?", answer: "Pode e deve. É possível novo pedido com ajustes ou ação judicial para revisar a negativa anterior." },
     ],
   },
 
@@ -156,6 +162,9 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { question: "Preciso guardar a nota fiscal?", answer: "Sim, ajuda bastante. Mas mesmo sem ela, temos outras formas de provar a compra." },
       { question: "Quanto tempo leva uma ação de consumidor?", answer: "Varia, mas costuma ser mais rápida que outras ações. Podem ser meses a alguns anos dependendo da complexidade." },
       { question: "A empresa não vai retaliar?", answer: "Não pode. Retaliar quem exerce direito é crime. Você está protegido legalmente." },
+      { question: "Posso pedir devolução em dobro de cobrança indevida?", answer: "Em diversos casos, sim, quando há cobrança indevida com pagamento. Avaliamos a aplicação no seu cenário." },
+      { question: "Compra online tem prazo para arrependimento?", answer: "Tem. Regra geral de 7 dias para desistência em compras fora do estabelecimento comercial." },
+      { question: "Posso pedir dano moral além do reembolso?", answer: "Pode, quando houver abalo relevante, perda de tempo excessiva ou violação clara dos seus direitos." },
     ],
   },
 
@@ -195,6 +204,9 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { question: "Posso conseguir guarda compartilhada?", answer: "Em muitos casos, sim. A lei favorece o contato de ambos os pais com os filhos. Podemos estruturar um acordo que funcione." },
       { question: "Quanto tempo leva uma separação?", answer: "Se for consensual (acordo), pode ser feito em semanas. Se litigioso, leva mais tempo, mas lutamos para agilizar." },
       { question: "Como funciona se o ex-cônjuge está em outro estado?", answer: "Funciona normalmente. Temos parcerias em todo Brasil e atuamos remotamente sem problema." },
+      { question: "Pensão alimentícia pode ser revista depois?", answer: "Pode sim. Mudança de renda, necessidade dos filhos ou desemprego podem justificar revisão judicial." },
+      { question: "É possível regularizar guarda sem briga longa?", answer: "Sim. Priorizamos acordo com mediação e plano parental, reduzindo desgaste emocional e tempo." },
+      { question: "União estável tem os mesmos efeitos no patrimônio?", answer: "Tem efeitos relevantes. Em geral há partilha de bens adquiridos na convivência, salvo pacto diferente." },
     ],
   },
 
@@ -234,6 +246,9 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { question: "Qual é meu direito à defesa?", answer: "Direito absoluto. Mesmo sem poder pagar, tem direito à defensor público ou podemos atuar mediante programa de assistência." },
       { question: "Quanto tempo demora para sair da cadeia?", answer: "Pode ser horas, dias ou semanas, dependendo da urgência. Peticionamos imediatamente após contratação." },
       { question: "Posso trabalhar durante o processo criminal?", answer: "Depende. Se tiver liberdade, pode trabalhar. Se preso, podemos negociar regime aberto ou semi-aberto." },
+      { question: "Posso responder em liberdade mesmo com processo?", answer: "Em muitos casos, sim. Requeremos medidas cabíveis para liberdade provisória e revogação de preventiva." },
+      { question: "Silêncio no depoimento pode me prejudicar?", answer: "Não. O direito ao silêncio é constitucional e não pode ser usado como prova de culpa." },
+      { question: "Quando cabe habeas corpus?", answer: "Quando há ilegalidade ou abuso na restrição de liberdade. Avaliamos rapidamente para agir com urgência." },
     ],
   },
 
@@ -273,6 +288,9 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { question: "Preciso pagar enquanto disputo a dívida?", answer: "Normalmente não. Podemos requerer liminar para suspender a cobrança durante o processo." },
       { question: "Quanto tempo leva um processo tributário?", answer: "Varia muito, mas geralmente entre 1 e 3 anos em primeira instância. Estamos prontos para recorrer em instâncias superiores." },
       { question: "Quanto a Receita Federal pode cobrar de multa?", answer: "Há limites legais. Multas abusivas são passíveis de contestação e redução judicial." },
+      { question: "Posso recuperar imposto pago indevidamente?", answer: "Em muitos casos, sim. É possível pedir restituição ou compensação de valores recolhidos a maior." },
+      { question: "Empresa no Simples também pode revisar tributos?", answer: "Pode. Inclusive no Simples há teses de recuperação e correção de enquadramento." },
+      { question: "Recebi auto de infração. Ainda há defesa?", answer: "Sim. Há fases administrativas e judiciais para anular ou reduzir autuações indevidas." },
     ],
   },
 
@@ -312,6 +330,9 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { question: "Quanto tempo leva para despejar um inquilino?", answer: "Pode variar de 2 meses a 1 ano dependendo se é por falta de pagamento ou término de contrato. Aceleramos o máximo possível." },
       { question: "Posso cortar água/luz para obrigar pagamento?", answer: "Não! Isso é crime. Devemos agir judicialmente. Deixe conosco." },
       { question: "O inquilino tem direito de permanecer se pagar depois?", answer: "Depende. Se está muito atrasado, podemos buscar despejo mesmo com pagamento posterior. Analisamos caso a caso." },
+      { question: "Comprei imóvel com vício oculto. Posso ser indenizado?", answer: "Pode. O comprador pode exigir reparo, abatimento do preço ou até rescisão, conforme o caso." },
+      { question: "Posso revisar cláusulas de contrato de compra e venda?", answer: "Sim. Cláusulas abusivas podem ser revistas judicialmente para equilibrar o contrato." },
+      { question: "Condomínio pode cobrar taxas atrasadas antigas?", answer: "Pode cobrar, respeitando prescrição e critérios legais. Analisamos valores e defesa adequada." },
     ],
   },
 
@@ -351,6 +372,9 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { question: "Preciso de um contrato por escrito?", answer: "Idealmente sim. Mas mesmo verbais são válidos. Precisamos provar, mas é possível." },
       { question: "Quanto tempo leva uma ação civil?", answer: "Varia bastante. Pode ser meses em caso de acordo, ou anos se for litigioso até última instância." },
       { question: "Quanto custa uma ação civil?", answer: "Depende da complexidade. Oferecemos consultoria para entender os custos antes de agir." },
+      { question: "Posso cobrar dívida sem nota promissória?", answer: "Pode, desde que existam outras provas da obrigação, como mensagens, transferências e testemunhas." },
+      { question: "Cabe dano moral em descumprimento contratual?", answer: "Depende do impacto. Quando há violação grave de direitos da personalidade, pode caber indenização." },
+      { question: "Vale a pena tentar acordo antes do processo?", answer: "Na maioria dos casos, sim. Negociação prévia pode reduzir custo e tempo sem perder segurança jurídica." },
     ],
   },
 };
