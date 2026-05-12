@@ -78,7 +78,6 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { question: "Vou ter que pagar para fazer a análise do meu caso?", answer: "De maneira nenhuma! A análise inicial via nossa tecnologia e a consulta com o advogado especialista são 100% gratuitas." },
       { question: "Estou em outro estado, preciso ir a um escritório físico?", answer: "Não, nosso atendimento é totalmente online perante todos os tribunais do Brasil (TRT). Você tira dúvidas, assina procurações e envia documentos, tudo pelo seu próprio celular com segurança." },
       { question: "Meus dados estão protegidos de verdade?", answer: "Completamente. Operamos em estrita concordância com a Lei Geral de Proteção de Dados (LGPD) e com o código rigoroso da OAB. Toda informação trafegada é criptografada." },
-      { question: "Ouvi dizer que processar empresa 'suja o nome' ou impede de arrumar trabalho. É verdade?", answer: "Isso é uma grande mentira inventada para te dar medo. Cobrar seus direitos é uma atitude honrada, e empresas sérias de verdade sequer perdem tempo checando isso em recrutamentos." },
     ],
   },
 
