@@ -452,6 +452,7 @@ export default function LandingPageDinamica({
           motivo,
           tempo,
           contexto_adicional: `${template.step5Question}: ${prioridade}`,
+          mensagem_lead: duvida.trim(),
           provas: provas.join(", "),
           ab_variant: abVariant,
           ab_session_id: abSessionId,

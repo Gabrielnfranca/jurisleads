@@ -489,6 +489,7 @@ export default function LandingPageCaptacao() {
           motivo,
           tempo,
           contexto_adicional: `${tpl.step5Question}: ${prioridade}`,
+          mensagem_lead: duvida.trim(),
           provas: provas.join(", "),
           ab_variant: abVariant,
           ab_session_id: abSessionId,

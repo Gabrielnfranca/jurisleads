@@ -24,6 +24,39 @@ function normalizeText(value: string) {
     .toLowerCase();
 }
 
+function formatBRL(value: number) {
+  const rounded = Math.max(1000, Math.round(value / 1000) * 1000);
+  return `R$ ${rounded.toLocaleString("pt-BR")}`;
+}
+
+function buildEstimatedRange(area: LegalAreaType, score: number) {
+  const maxByArea: Record<LegalAreaType, number> = {
+    trabalhista: 80000,
+    previdenciario: 50000,
+    consumidor: 30000,
+    familia: 70000,
+    criminal: 40000,
+    tributario: 120000,
+    imobiliario: 180000,
+    civil: 90000,
+  };
+
+  const tiers = [
+    { max: 34, minFactor: 0.05, maxFactor: 0.15 },
+    { max: 49, minFactor: 0.1, maxFactor: 0.25 },
+    { max: 64, minFactor: 0.2, maxFactor: 0.4 },
+    { max: 79, minFactor: 0.35, maxFactor: 0.6 },
+    { max: 100, minFactor: 0.5, maxFactor: 0.85 },
+  ] as const;
+
+  const maxRef = maxByArea[area] ?? 70000;
+  const tier = tiers.find((t) => score <= t.max) ?? tiers[2];
+  const minValue = maxRef * tier.minFactor;
+  const maxValue = maxRef * tier.maxFactor;
+
+  return `${formatBRL(minValue)} - ${formatBRL(maxValue)}`;
+}
+
 function buildFallbackClassification(params: {
   area: LegalAreaType;
   situacao: string;
@@ -31,9 +64,10 @@ function buildFallbackClassification(params: {
   tempo: string;
   provas: string;
   contextoAdicional: string;
+  mensagemLead: string;
 }) {
-  const { area, situacao, motivo, tempo, provas, contextoAdicional } = params;
-  const fullText = normalizeText(`${situacao} ${motivo} ${tempo} ${provas} ${contextoAdicional}`);
+  const { area, situacao, motivo, tempo, provas, contextoAdicional, mensagemLead } = params;
+  const fullText = normalizeText(`${situacao} ${motivo} ${tempo} ${provas} ${contextoAdicional} ${mensagemLead}`);
 
   let score = 45;
 
@@ -72,8 +106,7 @@ function buildFallbackClassification(params: {
   const ia_score = score >= 70 ? "Quente" : score >= 50 ? "Morno" : "Frio";
   const chance_exito = String(score);
 
-  const valor_estimado =
-    score >= 70 ? "R$ 15.000 - R$ 60.000" : score >= 50 ? "R$ 6.000 - R$ 25.000" : "R$ 2.000 - R$ 12.000";
+  const valor_estimado = buildEstimatedRange(area, score);
 
   return {
     ia_score,
@@ -97,7 +130,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { slug, nome, telefone, situacao, motivo, tempo, provas, contexto_adicional, ab_variant, ab_session_id } = await req.json();
+  const { slug, nome, telefone, situacao, motivo, tempo, provas, contexto_adicional, mensagem_lead, ab_variant, ab_session_id } = await req.json();
+
+  const mensagemLeadTexto = String(mensagem_lead ?? "").trim();
+  const provasTexto = String(provas ?? "").trim();
+  const provasComMensagem = mensagemLeadTexto
+    ? `${provasTexto}${provasTexto ? "\n\n" : ""}Mensagem do lead: ${mensagemLeadTexto}`
+    : provasTexto;
 
   const missingFields = [
     ["situacao", situacao],
@@ -144,8 +183,9 @@ Dados do lead:
 - ${areaTemplate.step1Question}: ${situacao}
 - ${areaTemplate.step2Question}: ${motivo}
 - ${areaTemplate.step3Question}: ${tempo}
-- Provas disponíveis: ${provas || "Não informado"}
+- Provas disponíveis: ${provasTexto || "Não informado"}
 - ${areaTemplate.step5Question}: ${contexto_adicional}
+- Mensagem adicional do lead: ${mensagemLeadTexto || "Não informado"}
 
 Regras de qualificação:
 - Avalie coerência jurídica com a área ${area}, evitando critérios exclusivos de outras áreas.
@@ -179,10 +219,11 @@ Responda EXATAMENTE neste formato JSON:
       const validScores = ["Quente", "Morno", "Frio"];
       ia_score = validScores.includes(parsed.ia_score) ? parsed.ia_score : "Morno";
       resumo = typeof parsed.resumo === "string" ? parsed.resumo.slice(0, 200) : "";
-      chance_exito = parsed.chance_exito != null
-        ? String(Math.min(99, Math.max(1, parseInt(String(parsed.chance_exito)) || 60)))
-        : "60";
-      valor_estimado = typeof parsed.valor_estimado === "string" ? parsed.valor_estimado : "A calcular";
+      const chanceNum = parsed.chance_exito != null
+        ? Math.min(99, Math.max(1, parseInt(String(parsed.chance_exito)) || 60))
+        : 60;
+      chance_exito = String(chanceNum);
+      valor_estimado = buildEstimatedRange(area, chanceNum);
       pontos_fortes = Array.isArray(parsed.pontos_fortes)
         ? JSON.stringify(parsed.pontos_fortes.slice(0, 4).map((p: unknown) => String(p)))
         : "[]";
@@ -194,8 +235,9 @@ Responda EXATAMENTE neste formato JSON:
       situacao: String(situacao || ""),
       motivo: String(motivo || ""),
       tempo: String(tempo || ""),
-      provas: String(provas || ""),
+      provas: provasTexto,
       contextoAdicional: String(contexto_adicional || ""),
+      mensagemLead: mensagemLeadTexto,
     });
     ia_score = fallback.ia_score;
     chance_exito = fallback.chance_exito;
@@ -211,7 +253,7 @@ Responda EXATAMENTE neste formato JSON:
     situacao,
     motivo,
     tempo,
-    provas: provas || "",
+    provas: provasComMensagem,
     ia_score,
     resumo,
     chance_exito,
@@ -231,7 +273,7 @@ Responda EXATAMENTE neste formato JSON:
       session_id: String(ab_session_id),
       variant: String(ab_variant),
       event_name: "submitted",
-      step: 5,
+      step: 6,
       ia_score,
       lead_id: lead?.id,
     });

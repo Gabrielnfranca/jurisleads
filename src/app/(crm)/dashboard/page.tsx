@@ -592,6 +592,12 @@ function LeadModal({
   let pontosFortesParsed: string[] = [];
   try { if (lead.pontos_fortes) pontosFortesParsed = JSON.parse(lead.pontos_fortes); } catch { /* noop */ }
   const chanceNum = parseInt(lead.chance_exito ?? '0') || 0;
+  const provasRaw = String(lead.provas ?? "");
+  const mensagemLeadMatch = provasRaw.match(/(?:^|\n)Mensagem do lead:\s*([\s\S]*)$/i);
+  const mensagemLead = mensagemLeadMatch?.[1]?.trim() ?? "";
+  const provasDisplay = mensagemLead
+    ? provasRaw.replace(/\n?Mensagem do lead:[\s\S]*$/i, "").trim()
+    : provasRaw.trim();
 
   const scoreColors: Record<string, string> = {
     'Quente': 'text-orange-700 bg-orange-100 border-orange-200',
@@ -715,12 +721,20 @@ function LeadModal({
               </p>
               <p className="text-sm font-bold text-slate-800">{lead.motivo || '—'}</p>
             </div>
-            {lead.provas && (
+            {provasDisplay && (
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 col-span-2">
                 <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-1.5 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5" /> {areaTemplate.step4Question}
                 </p>
-                <p className="text-sm font-bold text-slate-800">{lead.provas}</p>
+                <p className="text-sm font-bold text-slate-800">{provasDisplay}</p>
+              </div>
+            )}
+            {mensagemLead && (
+              <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100 col-span-2">
+                <p className="text-[10px] uppercase font-black tracking-widest text-blue-500 mb-1.5 flex items-center gap-1.5">
+                  <MessageCircle className="w-3.5 h-3.5" /> Mensagem do Lead
+                </p>
+                <p className="text-sm font-bold text-slate-800">{mensagemLead}</p>
               </div>
             )}
           </div>
