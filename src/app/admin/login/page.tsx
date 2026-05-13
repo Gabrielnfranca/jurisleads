@@ -56,6 +56,31 @@ export default function AdminLoginPage() {
       return;
     }
 
+    const refreshToken = data.session?.refresh_token;
+    if (!refreshToken) {
+      setError("Sessão não foi criada corretamente. Tente novamente.");
+      setLoading(false);
+      return;
+    }
+
+    const sessionSync = await fetch("/api/admin/session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }),
+    });
+
+    if (!sessionSync.ok) {
+      await supabase.auth.signOut();
+      setError("Não foi possível manter a sessão do admin. Tente novamente.");
+      setLoading(false);
+      return;
+    }
+
     router.replace("/admin");
     router.refresh();
   };

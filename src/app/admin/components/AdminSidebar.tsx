@@ -84,6 +84,7 @@ export function AdminSidebar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    await fetch("/api/admin/session", { method: "DELETE" });
     window.location.href = "/admin/login";
   };
 
