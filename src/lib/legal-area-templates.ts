@@ -37,6 +37,8 @@ export interface AreaTemplate {
   step3Question: string;
   step3Options: Array<{ label: string; sublabel: string }>;
   step4Question: string;
+  step5Question: string;
+  step5Options: Array<{ label: string; sublabel: string }>;
   faqItems: Array<{ question: string; answer: string }>;
 }
 
@@ -74,6 +76,13 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { label: "Mais de 5 anos", sublabel: "Vínculo longo" },
     ],
     step4Question: "Você tem alguma prova do ocorrido?",
+    step5Question: "Qual é sua prioridade neste caso?",
+    step5Options: [
+      { label: "Entender se tenho direitos", sublabel: "Quero validação técnica" },
+      { label: "Receber valores atrasados", sublabel: "Meu foco é recuperar dinheiro" },
+      { label: "Resolver rapidamente", sublabel: "Preciso de ação imediata" },
+      { label: "Só tirar dúvidas por enquanto", sublabel: "Ainda estou avaliando" },
+    ],
     faqItems: [
       { question: "Vou ter que pagar para fazer a análise do meu caso?", answer: "De maneira nenhuma! A análise inicial via nossa tecnologia e a consulta com o advogado especialista são 100% gratuitas." },
       { question: "Estou em outro estado, preciso ir a um escritório físico?", answer: "Não, nosso atendimento é totalmente online perante todos os tribunais do Brasil (TRT). Você tira dúvidas, assina procurações e envia documentos, tudo pelo seu próprio celular com segurança." },
@@ -116,6 +125,13 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { label: "Mais de 5 anos", sublabel: "Luta muito prolongada" },
     ],
     step4Question: "Você possui documentação?",
+    step5Question: "Qual é sua prioridade previdenciária agora?",
+    step5Options: [
+      { label: "Conseguir aprovação do benefício", sublabel: "Quero resolver a negativa" },
+      { label: "Revisar valor da aposentadoria", sublabel: "Acredito que recebo menos" },
+      { label: "Agilizar o processo", sublabel: "Preciso de andamento rápido" },
+      { label: "Entender meu direito primeiro", sublabel: "Quero orientação técnica" },
+    ],
     faqItems: [
       { question: "Qual é o prazo para conseguir a aposentadoria?", answer: "Depende da sua situação. Podem ser meses ou poucos anos, dependendo se é administrativo ou judicial. Vamos te dar prazos realistas após análise." },
       { question: "Posso estar trabalhando e processar aposentadoria?", answer: "Sim! Você pode estar trabalhando normalmente. O processo segue em paralelo sem interferências." },
@@ -158,6 +174,13 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { label: "Há vários anos", sublabel: "Muito tempo atrás" },
     ],
     step4Question: "Tem comprovante?",
+    step5Question: "Qual resultado você espera?",
+    step5Options: [
+      { label: "Reembolso do valor pago", sublabel: "Quero recuperar meu dinheiro" },
+      { label: "Indenização por danos", sublabel: "Além do reembolso" },
+      { label: "Cancelar cobrança indevida", sublabel: "Parar cobrança e limpar nome" },
+      { label: "Apenas orientação inicial", sublabel: "Quero entender as opções" },
+    ],
     faqItems: [
       { question: "Preciso guardar a nota fiscal?", answer: "Sim, ajuda bastante. Mas mesmo sem ela, temos outras formas de provar a compra." },
       { question: "Quanto tempo leva uma ação de consumidor?", answer: "Varia, mas costuma ser mais rápida que outras ações. Podem ser meses a alguns anos dependendo da complexidade." },
@@ -200,6 +223,13 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { label: "Filhos maiores", sublabel: "Maioria de idade" },
     ],
     step4Question: "Já existe ação judicial?",
+    step5Question: "Qual é a urgência da sua situação familiar?",
+    step5Options: [
+      { label: "Urgente, envolve crianças", sublabel: "Demanda imediata" },
+      { label: "Preciso regularizar em breve", sublabel: "Quero resolver nos próximos dias" },
+      { label: "Posso negociar com calma", sublabel: "Busco acordo estruturado" },
+      { label: "Primeiro quero orientação", sublabel: "Ainda estou entendendo" },
+    ],
     faqItems: [
       { question: "Posso conseguir guarda compartilhada?", answer: "Em muitos casos, sim. A lei favorece o contato de ambos os pais com os filhos. Podemos estruturar um acordo que funcione." },
       { question: "Quanto tempo leva uma separação?", answer: "Se for consensual (acordo), pode ser feito em semanas. Se litigioso, leva mais tempo, mas lutamos para agilizar." },
@@ -242,6 +272,13 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { label: "Já faz tempo", sublabel: "Processo adiantado" },
     ],
     step4Question: "Você tem comprovantes?",
+    step5Question: "Qual é sua necessidade principal agora?",
+    step5Options: [
+      { label: "Atuação imediata e urgente", sublabel: "Defesa imediata" },
+      { label: "Liberdade provisória", sublabel: "Reduzir restrição de liberdade" },
+      { label: "Estratégia de defesa no processo", sublabel: "Planejamento técnico" },
+      { label: "Orientação inicial", sublabel: "Entender próximos passos" },
+    ],
     faqItems: [
       { question: "Qual é meu direito à defesa?", answer: "Direito absoluto. Mesmo sem poder pagar, tem direito à defensor público ou podemos atuar mediante programa de assistência." },
       { question: "Quanto tempo demora para sair da cadeia?", answer: "Pode ser horas, dias ou semanas, dependendo da urgência. Peticionamos imediatamente após contratação." },
@@ -284,6 +321,13 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { label: "Mais de 5 anos", sublabel: "Muitos anos" },
     ],
     step4Question: "Você tem documentação?",
+    step5Question: "Qual é seu objetivo tributário principal?",
+    step5Options: [
+      { label: "Anular multa/autuação", sublabel: "Reduzir ou cancelar cobrança" },
+      { label: "Recuperar tributo pago a maior", sublabel: "Restituição/compensação" },
+      { label: "Negociar e regularizar dívida", sublabel: "Plano para ficar em dia" },
+      { label: "Diagnóstico preventivo", sublabel: "Evitar novos riscos fiscais" },
+    ],
     faqItems: [
       { question: "Preciso pagar enquanto disputo a dívida?", answer: "Normalmente não. Podemos requerer liminar para suspender a cobrança durante o processo." },
       { question: "Quanto tempo leva um processo tributário?", answer: "Varia muito, mas geralmente entre 1 e 3 anos em primeira instância. Estamos prontos para recorrer em instâncias superiores." },
@@ -326,6 +370,13 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { label: "Vários anos", sublabel: "Problema prolongado" },
     ],
     step4Question: "Você tem documentação?",
+    step5Question: "Qual é sua prioridade imobiliária?",
+    step5Options: [
+      { label: "Retomar posse ou despejo", sublabel: "Resolver ocupação/inadimplência" },
+      { label: "Revisar contrato", sublabel: "Evitar cláusulas abusivas" },
+      { label: "Cobrar valores devidos", sublabel: "Aluguéis ou perdas" },
+      { label: "Orientação para decidir", sublabel: "Avaliar melhor estratégia" },
+    ],
     faqItems: [
       { question: "Quanto tempo leva para despejar um inquilino?", answer: "Pode variar de 2 meses a 1 ano dependendo se é por falta de pagamento ou término de contrato. Aceleramos o máximo possível." },
       { question: "Posso cortar água/luz para obrigar pagamento?", answer: "Não! Isso é crime. Devemos agir judicialmente. Deixe conosco." },
@@ -368,6 +419,13 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
       { label: "Vários anos", sublabel: "Problema prolongado" },
     ],
     step4Question: "Você tem comprovantes?",
+    step5Question: "Qual é seu objetivo cível principal?",
+    step5Options: [
+      { label: "Receber indenização", sublabel: "Reparar dano sofrido" },
+      { label: "Cobrar dívida/obrigação", sublabel: "Executar o que é devido" },
+      { label: "Revisar ou rescindir contrato", sublabel: "Proteger patrimônio" },
+      { label: "Avaliação jurídica inicial", sublabel: "Entender viabilidade" },
+    ],
     faqItems: [
       { question: "Preciso de um contrato por escrito?", answer: "Idealmente sim. Mas mesmo verbais são válidos. Precisamos provar, mas é possível." },
       { question: "Quanto tempo leva uma ação civil?", answer: "Varia bastante. Pode ser meses em caso de acordo, ou anos se for litigioso até última instância." },

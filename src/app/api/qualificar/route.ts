@@ -30,9 +30,10 @@ function buildFallbackClassification(params: {
   motivo: string;
   tempo: string;
   provas: string;
+  contextoAdicional: string;
 }) {
-  const { area, situacao, motivo, tempo, provas } = params;
-  const fullText = normalizeText(`${situacao} ${motivo} ${tempo} ${provas}`);
+  const { area, situacao, motivo, tempo, provas, contextoAdicional } = params;
+  const fullText = normalizeText(`${situacao} ${motivo} ${tempo} ${provas} ${contextoAdicional}`);
 
   let score = 45;
 
@@ -60,6 +61,10 @@ function buildFallbackClassification(params: {
 
   if (/nao sei|sem prova|nenhuma prova/.test(fullText)) {
     score -= 10;
+  }
+
+  if (/urgente|imediata|rapida|rapido|agilizar/.test(fullText)) {
+    score += 5;
   }
 
   score = Math.max(15, Math.min(95, score));
@@ -92,12 +97,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { slug, nome, telefone, situacao, motivo, tempo, provas, ab_variant, ab_session_id } = await req.json();
+  const { slug, nome, telefone, situacao, motivo, tempo, provas, contexto_adicional, ab_variant, ab_session_id } = await req.json();
 
   const missingFields = [
     ["situacao", situacao],
     ["motivo", motivo],
     ["tempo", tempo],
+    ["contexto_adicional", contexto_adicional],
     ["nome", nome],
     ["telefone", telefone],
   ].filter(([, value]) => !String(value ?? "").trim()).map(([field]) => field);
@@ -139,6 +145,7 @@ Dados do lead:
 - ${areaTemplate.step2Question}: ${motivo}
 - ${areaTemplate.step3Question}: ${tempo}
 - Provas disponíveis: ${provas || "Não informado"}
+- ${areaTemplate.step5Question}: ${contexto_adicional}
 
 Regras de qualificação:
 - Avalie coerência jurídica com a área ${area}, evitando critérios exclusivos de outras áreas.
@@ -188,6 +195,7 @@ Responda EXATAMENTE neste formato JSON:
       motivo: String(motivo || ""),
       tempo: String(tempo || ""),
       provas: String(provas || ""),
+      contextoAdicional: String(contexto_adicional || ""),
     });
     ia_score = fallback.ia_score;
     chance_exito = fallback.chance_exito;

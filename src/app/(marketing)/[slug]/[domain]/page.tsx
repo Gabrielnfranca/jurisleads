@@ -24,7 +24,7 @@ import {
   ChevronDown
 } from "lucide-react";
 
-const STEPS = 5;
+const STEPS = 6;
 
 type OptionCardProps = {
   label: string;
@@ -278,6 +278,7 @@ export default function LandingPageDinamica({
   const [situacao, setSituacao] = useState("");
   const [motivo, setMotivo] = useState("");
   const [tempo, setTempo] = useState("");
+  const [prioridade, setPrioridade] = useState("");
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [provas, setProvas] = useState<string[]>([]);
@@ -401,6 +402,7 @@ export default function LandingPageDinamica({
   const handleSelectSituacao = (val: string) => { setSituacao(val); setTimeout(next, 350); };
   const handleSelectMotivo = (val: string) => { setMotivo(val); setTimeout(next, 350); };
   const handleSelectTempo = (val: string) => { setTempo(val); setTimeout(next, 350); };
+  const handleSelectPrioridade = (val: string) => { setPrioridade(val); setTimeout(next, 350); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -426,6 +428,12 @@ export default function LandingPageDinamica({
       return;
     }
 
+    if (!prioridade) {
+      setStep(5);
+      alert("Selecione sua prioridade para continuarmos a análise.");
+      return;
+    }
+
     if (!nomeNormalizado || !telefoneNormalizado) {
       alert("Preencha seu nome e telefone para concluir a análise.");
       return;
@@ -443,6 +451,7 @@ export default function LandingPageDinamica({
           situacao,
           motivo,
           tempo,
+          contexto_adicional: `${template.step5Question}: ${prioridade}`,
           provas: provas.join(", "),
           ab_variant: abVariant,
           ab_session_id: abSessionId,
@@ -753,6 +762,12 @@ export default function LandingPageDinamica({
                )}
                {step === 5 && (
                   <>
+                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight tracking-tight mb-3">{template.step5Question}</h1>
+                    <p className="text-slate-500 text-base md:text-lg font-medium">Essa resposta ajuda a priorizar seu atendimento.</p>
+                  </>
+               )}
+               {step === 6 && (
+                  <>
                     <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight tracking-tight mb-3">Falta pouco!</h1>
                     <p className="text-slate-500 text-base md:text-lg font-medium">Informe seus contatos para nossa equipe jurídica.</p>
                   </>
@@ -838,6 +853,20 @@ export default function LandingPageDinamica({
                )}
 
                {step === 5 && (
+                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {template.step5Options.map((opt, idx) => (
+                      <OptionCard 
+                        key={idx}
+                        label={opt.label}
+                        sublabel={opt.sublabel}
+                        selected={prioridade === opt.label}
+                        onClick={() => handleSelectPrioridade(opt.label)}
+                      />
+                    ))}
+                 </div>
+               )}
+
+               {step === 6 && (
                  <form onSubmit={handleSubmit} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div>
                       <Label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5 mb-2">

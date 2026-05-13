@@ -24,7 +24,7 @@ import {
   Scale
 } from "lucide-react";
 
-const STEPS = 5;
+const STEPS = 6;
 
 type OptionCardProps = {
   label: string;
@@ -290,6 +290,7 @@ export default function LandingPageCaptacao() {
   const [situacao, setSituacao] = useState("");
   const [motivo, setMotivo] = useState("");
   const [tempo, setTempo] = useState("");
+  const [prioridade, setPrioridade] = useState("");
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [provas, setProvas] = useState<string[]>([]);
@@ -311,6 +312,7 @@ export default function LandingPageCaptacao() {
   const handleSelectSituacao = (val: string) => { setSituacao(val); setTimeout(next, 350); };
   const handleSelectMotivo = (val: string) => { setMotivo(val); setTimeout(next, 350); };
   const handleSelectTempo = (val: string) => { setTempo(val); setTimeout(next, 350); };
+  const handleSelectPrioridade = (val: string) => { setPrioridade(val); setTimeout(next, 350); };
 
   useEffect(() => {
     if (started) window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -463,6 +465,12 @@ export default function LandingPageCaptacao() {
       return;
     }
 
+    if (!prioridade) {
+      setStep(5);
+      alert("Selecione sua prioridade para continuarmos a análise.");
+      return;
+    }
+
     if (!nomeNormalizado || !telefoneNormalizado) {
       alert("Preencha seu nome e telefone para concluir a análise.");
       return;
@@ -480,6 +488,7 @@ export default function LandingPageCaptacao() {
           situacao,
           motivo,
           tempo,
+          contexto_adicional: `${tpl.step5Question}: ${prioridade}`,
           provas: provas.join(", "),
           ab_variant: abVariant,
           ab_session_id: abSessionId,
@@ -811,6 +820,12 @@ export default function LandingPageCaptacao() {
                )}
                {step === 5 && (
                   <>
+                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight tracking-tight mb-3">{tpl.step5Question}</h1>
+                    <p className="text-slate-500 text-base md:text-lg font-medium">Essa resposta ajuda a priorizar seu atendimento.</p>
+                  </>
+               )}
+               {step === 6 && (
+                  <>
                     <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight tracking-tight mb-3">Falta pouco!</h1>
                     <p className="text-slate-500 text-base md:text-lg font-medium">Informe seus contatos para nossa equipe jurídica.</p>
                   </>
@@ -888,6 +903,14 @@ export default function LandingPageCaptacao() {
                )}
 
                {step === 5 && (
+                 <div className="space-y-5 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                    {tpl.step5Options.map((opt) => (
+                      <OptionCard key={opt.label} label={opt.label} sublabel={opt.sublabel} selected={prioridade === opt.label} onClick={() => handleSelectPrioridade(opt.label)} />
+                    ))}
+                 </div>
+               )}
+
+               {step === 6 && (
                  <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
                     <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-5 flex items-start gap-4 mb-4">
                        <Info className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
