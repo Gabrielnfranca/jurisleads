@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { getAreaTemplate, type LegalAreaType } from "@/lib/legal-area-templates";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -14,6 +15,72 @@ function getSupabaseAdmin() {
 
   // Cliente server-side com service_role — nunca exposto ao browser
   return createClient(url, serviceKey);
+}
+
+function normalizeText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function buildFallbackClassification(params: {
+  area: LegalAreaType;
+  situacao: string;
+  motivo: string;
+  tempo: string;
+  provas: string;
+}) {
+  const { area, situacao, motivo, tempo, provas } = params;
+  const fullText = normalizeText(`${situacao} ${motivo} ${tempo} ${provas}`);
+
+  let score = 45;
+
+  if (normalizeText(provas).trim() && !normalizeText(provas).includes("nao informado")) {
+    score += 15;
+  }
+
+  if (/mais de 5|3 a 5|varios anos|longo/.test(fullText)) {
+    score += 8;
+  }
+
+  const hotSignals: Record<LegalAreaType, string[]> = {
+    trabalhista: ["assedio", "acidente", "fgts", "demitido", "rescis"],
+    previdenciario: ["inss", "aposentadoria", "beneficio", "negado", "cnis"],
+    consumidor: ["cobranca indevida", "produto com defeito", "servico nao", "fraude"],
+    familia: ["pensao", "guarda", "divisao de bens", "visita", "heranca"],
+    criminal: ["preso", "prisao", "investig", "acus", "habeas"],
+    tributario: ["multa", "auto de infracao", "receita", "tribut", "imposto"],
+    imobiliario: ["despejo", "inquilino", "aluguel", "invas", "condominio"],
+    civil: ["contrato", "indenizacao", "divida", "dano moral", "responsabilidade"],
+  };
+
+  const areaMatches = hotSignals[area].filter((signal) => fullText.includes(signal)).length;
+  score += Math.min(20, areaMatches * 6);
+
+  if (/nao sei|sem prova|nenhuma prova/.test(fullText)) {
+    score -= 10;
+  }
+
+  score = Math.max(15, Math.min(95, score));
+
+  const ia_score = score >= 70 ? "Quente" : score >= 50 ? "Morno" : "Frio";
+  const chance_exito = String(score);
+
+  const valor_estimado =
+    score >= 70 ? "R$ 15.000 - R$ 60.000" : score >= 50 ? "R$ 6.000 - R$ 25.000" : "R$ 2.000 - R$ 12.000";
+
+  return {
+    ia_score,
+    chance_exito,
+    valor_estimado,
+    resumo: `Caso classificado como ${ia_score} para ${area}. Recomendado aprofundar análise jurídica.`,
+    pontos_fortes: JSON.stringify([
+      "Triagem inicial concluída com sinais de viabilidade",
+      "Dados essenciais coletados no formulário",
+      "Caso pronto para revisão técnica do advogado",
+    ]),
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -48,9 +115,9 @@ export async function POST(req: NextRequest) {
 
   const { data: tenant, error: tenantError } = await supabaseAdmin
     .from("tenants")
-    .select("slug, ativo")
+    .select("slug, ativo, area_juridica")
     .eq("slug", slug)
-    .maybeSingle<{ slug: string; ativo: boolean }>();
+    .maybeSingle<{ slug: string; ativo: boolean; area_juridica?: LegalAreaType }>();
 
   if (tenantError) {
     return NextResponse.json({ error: tenantError.message }, { status: 500 });
@@ -60,20 +127,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Página de captação indisponível para este escritório" }, { status: 404 });
   }
 
-  const prompt = `Você é um assistente jurídico especialista em direito trabalhista brasileiro.
+  const area = (tenant.area_juridica || "trabalhista") as LegalAreaType;
+  const areaTemplate = getAreaTemplate(area);
+
+  const prompt = `Você é um assistente jurídico especialista em direito ${area} brasileiro.
 
 Analise o caso abaixo e responda APENAS com JSON válido, sem markdown, sem texto fora do JSON.
 
 Dados do lead:
-- Situação empregatícia: ${situacao}
-- Problema principal: ${motivo}
-- Tempo de vínculo: ${tempo}
+- ${areaTemplate.step1Question}: ${situacao}
+- ${areaTemplate.step2Question}: ${motivo}
+- ${areaTemplate.step3Question}: ${tempo}
 - Provas disponíveis: ${provas || "Não informado"}
 
-Critérios de qualificação:
-- Quente: alto potencial de indenização (ex: demissão sem justa causa + tempo longo, acidente de trabalho, assédio moral, rescisão não paga)
-- Morno: potencial moderado (ex: horas extras, irregularidades trabalhistas menores)
-- Frio: baixo potencial ou situação com poucos direitos a reclamar
+Regras de qualificação:
+- Avalie coerência jurídica com a área ${area}, evitando critérios exclusivos de outras áreas.
+- Quente: alta chance de êxito com sinais fortes e boa prova.
+- Morno: chance moderada, requer validação documental adicional.
+- Frio: baixa chance inicial ou falta de elementos mínimos.
+- chance_exito deve ser inteiro entre 15 e 95.
 
 Responda EXATAMENTE neste formato JSON:
 {
@@ -110,13 +182,18 @@ Responda EXATAMENTE neste formato JSON:
     }
   } catch (err) {
     console.error("[qualificar] Erro Gemini:", err);
-    const isQuente = situacao.includes("Demitido") && (motivo.includes("Acidente") || motivo.includes("Assédio") || tempo.includes("5 anos"));
-    const isMorno = situacao.includes("Demitido") || motivo.includes("Rescisão") || motivo.includes("horas extras");
-    ia_score = isQuente ? "Quente" : isMorno ? "Morno" : "Frio";
-    chance_exito = isQuente ? "75" : isMorno ? "55" : "30";
-    valor_estimado = "A calcular";
-    resumo = "Análise automática — revisão manual recomendada.";
-    pontos_fortes = JSON.stringify(["Irregularidades identificadas no relato", "Caso encaminhado para análise jurídica"]);
+    const fallback = buildFallbackClassification({
+      area,
+      situacao: String(situacao || ""),
+      motivo: String(motivo || ""),
+      tempo: String(tempo || ""),
+      provas: String(provas || ""),
+    });
+    ia_score = fallback.ia_score;
+    chance_exito = fallback.chance_exito;
+    valor_estimado = fallback.valor_estimado;
+    resumo = fallback.resumo;
+    pontos_fortes = fallback.pontos_fortes;
   }
 
   const { data: lead, error } = await supabaseAdmin.from("leads").insert({

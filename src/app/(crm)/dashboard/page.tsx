@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { gerarMensagemPrimeiroAtendimento } from "@/lib/auto-atendimento";
+import { getAreaTemplate, type LegalAreaType } from "@/lib/legal-area-templates";
 import { 
   LogOut, 
   LayoutDashboard, 
@@ -48,6 +49,7 @@ export default function DashboardPage() {
   const [toastLead, setToastLead] = useState<Lead | null>(null);
   const [slugTenant, setSlugTenant] = useState<string | null>(null);
   const [nomeTenant, setNomeTenant] = useState<string | null>(null);
+  const [areaJuridicaTenant, setAreaJuridicaTenant] = useState<LegalAreaType>("trabalhista");
   const router = useRouter();
   const supabase = createClient();
 
@@ -104,7 +106,7 @@ export default function DashboardPage() {
       // Busca o slug e nome do tenant deste usuário
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('slug, nome, ativo')
+        .select('slug, nome, ativo, area_juridica')
         .eq('user_id', session.user.id)
         .single();
 
@@ -118,6 +120,9 @@ export default function DashboardPage() {
       currentSlug = slugFiltro;
       setSlugTenant(slugFiltro);
       setNomeTenant(tenant?.nome ?? null);
+      if (tenant?.area_juridica) {
+        setAreaJuridicaTenant(tenant.area_juridica as LegalAreaType);
+      }
 
       if (!slugFiltro) {
         setLeads([]);
@@ -407,7 +412,13 @@ export default function DashboardPage() {
 
       {/* Modal de detalhes */}
       {leadSelecionado && (
-        <LeadModal lead={leadSelecionado} onClose={() => setLeadSelecionado(null)} onDelete={deletarLead} onMover={moverLead} />
+        <LeadModal
+          lead={leadSelecionado}
+          areaJuridica={areaJuridicaTenant}
+          onClose={() => setLeadSelecionado(null)}
+          onDelete={deletarLead}
+          onMover={moverLead}
+        />
       )}
 
       {/* Toast — novo lead */}
@@ -558,15 +569,18 @@ const STATUS_LABELS: Record<Lead['status'], string> = {
 
 function LeadModal({
   lead,
+  areaJuridica,
   onClose,
   onDelete,
   onMover,
 }: {
   lead: Lead;
+  areaJuridica: LegalAreaType;
   onClose: () => void;
   onDelete: (id: string) => void;
   onMover: (id: string, status: Lead['status']) => void;
 }) {
+  const areaTemplate = getAreaTemplate(areaJuridica);
   const idxAtual = STATUS_ORDER.indexOf(lead.status);
   const proximoStatus = STATUS_ORDER[idxAtual + 1] as Lead['status'] | undefined;
   const statusAnterior = STATUS_ORDER[idxAtual - 1] as Lead['status'] | undefined;
@@ -685,26 +699,26 @@ function LeadModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
               <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-1.5 flex items-center gap-1.5">
-                <AlertOctagon className="w-3.5 h-3.5" /> Situação
+                <AlertOctagon className="w-3.5 h-3.5" /> {areaTemplate.step1Question}
               </p>
               <p className="text-sm font-bold text-slate-800">{lead.situacao || '—'}</p>
             </div>
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
               <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-1.5 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" /> Tempo do Emprego
+                <Clock className="w-3.5 h-3.5" /> {areaTemplate.step3Question}
               </p>
               <p className="text-sm font-bold text-slate-800">{lead.tempo || '—'}</p>
             </div>
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 col-span-2">
               <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-1.5 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" /> Motivo Principal
+                <FileText className="w-3.5 h-3.5" /> {areaTemplate.step2Question}
               </p>
               <p className="text-sm font-bold text-slate-800">{lead.motivo || '—'}</p>
             </div>
             {lead.provas && (
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 col-span-2">
                 <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-1.5 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Provas Disponíveis
+                  <ShieldCheck className="w-3.5 h-3.5" /> {areaTemplate.step4Question}
                 </p>
                 <p className="text-sm font-bold text-slate-800">{lead.provas}</p>
               </div>
