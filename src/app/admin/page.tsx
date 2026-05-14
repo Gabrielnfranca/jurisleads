@@ -98,14 +98,14 @@ export default function AdminPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between lg:justify-end gap-4 lg:gap-3">
               <div className="hidden sm:block text-right">
                 <p className="text-xs text-slate-400">Usuario atual</p>
                 <p className="text-sm font-semibold text-slate-700">{userEmail || "-"}</p>
               </div>
               <button
                 onClick={() => router.push("/admin/clientes/novo")}
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors"
+                className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-2 rounded-xl transition-colors whitespace-nowrap shrink-0 h-10"
               >
                 <Plus className="w-4 h-4" /> Novo cliente
               </button>
