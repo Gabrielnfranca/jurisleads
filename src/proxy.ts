@@ -6,6 +6,29 @@ export const config = {
   matcher: ["/((?!api/|_next/|_static/|_vercel|favicon\\.ico|.*\\..*).*)" ],
 };
 
+function applySecurityHeaders(response: NextResponse) {
+  const csp = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "form-action 'self'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "style-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://api.resend.com https://api.telegram.org",
+    "upgrade-insecure-requests",
+  ].join("; ");
+
+  response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  return response;
+}
+
 async function getSession(req: NextRequest) {
   let response = NextResponse.next({ request: req });
   const supabase = createServerClient(
@@ -27,7 +50,7 @@ async function getSession(req: NextRequest) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  return { session, response };
+  return { session, response: applySecurityHeaders(response) };
 }
 
 export async function proxy(req: NextRequest) {
@@ -48,18 +71,18 @@ export async function proxy(req: NextRequest) {
       } else if (!url.pathname.startsWith("/admin")) {
         url.pathname = `/admin${url.pathname}`;
       }
-      return NextResponse.rewrite(url);
+      return applySecurityHeaders(NextResponse.rewrite(url));
     }
 
     // Subdomínio da plataforma (ex: lp.seudominio-base.com): usa slug direto.
     if (isRootSubdomain && subdomain && subdomain !== "localhost") {
       url.pathname = `/${subdomain}`;
-      return NextResponse.rewrite(url);
+      return applySecurityHeaders(NextResponse.rewrite(url));
     }
 
     // Em domínios da própria Vercel (produção/preview), mantém rota padrão /slug.
     if (isVercelHost) {
-      return NextResponse.next();
+      return applySecurityHeaders(NextResponse.next());
     }
 
     // Domínio customizado com subdomínio de captura (ex: lp.cliente.com.br)
@@ -73,7 +96,7 @@ export async function proxy(req: NextRequest) {
         // fallback para domínio sem subdomínio (ex: cliente.com.br)
         url.pathname = `/captacao/${host}`;
       }
-      return NextResponse.rewrite(url);
+      return applySecurityHeaders(NextResponse.rewrite(url));
     }
   }
 
@@ -84,7 +107,7 @@ export async function proxy(req: NextRequest) {
   const isCrmConfigPath = url.pathname.startsWith("/configuracoes");
 
   if (!isAdminPath && !isDashboardPath && !isCrmConfigPath) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   const { session, response } = await getSession(req);
@@ -93,14 +116,14 @@ export async function proxy(req: NextRequest) {
     const loginUrl = isAdminPath
       ? new URL("/admin/login", req.url)
       : new URL("/login", req.url);
-    return NextResponse.redirect(loginUrl);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
   // /admin/* exige ser o administrador
   if (isAdminPath) {
     const adminEmail = process.env.ADMIN_EMAIL;
     if (adminEmail && session.user.email !== adminEmail) {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return applySecurityHeaders(NextResponse.redirect(new URL("/login", req.url)));
     }
   }
 

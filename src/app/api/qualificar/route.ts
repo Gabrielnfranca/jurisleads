@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { getAreaTemplate, type LegalAreaType } from "@/lib/legal-area-templates";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -122,6 +123,14 @@ function buildFallbackClassification(params: {
 }
 
 export async function POST(req: NextRequest) {
+  const rateLimit = checkRateLimit(req, "qualificar", 8, 10 * 60 * 1000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) } }
+    );
+  }
+
   const supabaseAdmin = getSupabaseAdmin();
   if (!supabaseAdmin) {
     return NextResponse.json(
@@ -132,19 +141,28 @@ export async function POST(req: NextRequest) {
 
   const { slug, nome, telefone, situacao, motivo, tempo, provas, contexto_adicional, mensagem_lead, ab_variant, ab_session_id } = await req.json();
 
-  const mensagemLeadTexto = String(mensagem_lead ?? "").trim();
-  const provasTexto = String(provas ?? "").trim();
+  const limit = (value: unknown, maxLength: number) => String(value ?? "").trim().slice(0, maxLength);
+
+  const slugNormalizado = limit(slug, 80).toLowerCase();
+  const nomeNormalizado = limit(nome, 120);
+  const telefoneNormalizado = limit(telefone, 40);
+  const situacaoNormalizada = limit(situacao, 160);
+  const motivoNormalizado = limit(motivo, 220);
+  const tempoNormalizado = limit(tempo, 120);
+  const provasTexto = limit(provas, 600);
+  const contextoNormalizado = limit(contexto_adicional, 180);
+  const mensagemLeadTexto = limit(mensagem_lead, 800);
   const provasComMensagem = mensagemLeadTexto
     ? `${provasTexto}${provasTexto ? "\n\n" : ""}Mensagem do lead: ${mensagemLeadTexto}`
     : provasTexto;
 
   const missingFields = [
-    ["situacao", situacao],
-    ["motivo", motivo],
-    ["tempo", tempo],
-    ["contexto_adicional", contexto_adicional],
-    ["nome", nome],
-    ["telefone", telefone],
+    ["situacao", situacaoNormalizada],
+    ["motivo", motivoNormalizado],
+    ["tempo", tempoNormalizado],
+    ["contexto_adicional", contextoNormalizado],
+    ["nome", nomeNormalizado],
+    ["telefone", telefoneNormalizado],
   ].filter(([, value]) => !String(value ?? "").trim()).map(([field]) => field);
 
   if (missingFields.length > 0) {
@@ -154,14 +172,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!slug) {
+  if (!slugNormalizado) {
     return NextResponse.json({ error: "Tenant não informado" }, { status: 400 });
   }
 
   const { data: tenant, error: tenantError } = await supabaseAdmin
     .from("tenants")
     .select("slug, ativo, area_juridica")
-    .eq("slug", slug)
+    .eq("slug", slugNormalizado)
     .maybeSingle<{ slug: string; ativo: boolean; area_juridica?: LegalAreaType }>();
 
   if (tenantError) {
@@ -180,11 +198,11 @@ export async function POST(req: NextRequest) {
 Analise o caso abaixo e responda APENAS com JSON válido, sem markdown, sem texto fora do JSON.
 
 Dados do lead:
-- ${areaTemplate.step1Question}: ${situacao}
-- ${areaTemplate.step2Question}: ${motivo}
-- ${areaTemplate.step3Question}: ${tempo}
+- ${areaTemplate.step1Question}: ${situacaoNormalizada}
+- ${areaTemplate.step2Question}: ${motivoNormalizado}
+- ${areaTemplate.step3Question}: ${tempoNormalizado}
 - Provas disponíveis: ${provasTexto || "Não informado"}
-- ${areaTemplate.step5Question}: ${contexto_adicional}
+- ${areaTemplate.step5Question}: ${contextoNormalizado}
 - Mensagem adicional do lead: ${mensagemLeadTexto || "Não informado"}
 
 Regras de qualificação:
@@ -232,11 +250,11 @@ Responda EXATAMENTE neste formato JSON:
     console.error("[qualificar] Erro Gemini:", err);
     const fallback = buildFallbackClassification({
       area,
-      situacao: String(situacao || ""),
-      motivo: String(motivo || ""),
-      tempo: String(tempo || ""),
+      situacao: situacaoNormalizada,
+      motivo: motivoNormalizado,
+      tempo: tempoNormalizado,
       provas: provasTexto,
-      contextoAdicional: String(contexto_adicional || ""),
+      contextoAdicional: contextoNormalizado,
       mensagemLead: mensagemLeadTexto,
     });
     ia_score = fallback.ia_score;
@@ -247,12 +265,12 @@ Responda EXATAMENTE neste formato JSON:
   }
 
   const { data: lead, error } = await supabaseAdmin.from("leads").insert({
-    slug,
-    nome,
-    telefone,
-    situacao,
-    motivo,
-    tempo,
+    slug: slugNormalizado,
+    nome: nomeNormalizado,
+    telefone: telefoneNormalizado,
+    situacao: situacaoNormalizada,
+    motivo: motivoNormalizado,
+    tempo: tempoNormalizado,
     provas: provasComMensagem,
     ia_score,
     resumo,
@@ -269,7 +287,7 @@ Responda EXATAMENTE neste formato JSON:
 
   if (["A", "B"].includes(String(ab_variant)) && String(ab_session_id || "").trim()) {
     await supabaseAdmin.from("ab_events").insert({
-      slug,
+      slug: slugNormalizado,
       session_id: String(ab_session_id),
       variant: String(ab_variant),
       event_name: "submitted",

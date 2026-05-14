@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect, useRef, type SVGProps } from "react";
 import { getAreaTemplate, getAreaTestimonials, type LegalAreaType, type Testimonial } from "@/lib/legal-area-templates";
+import { renderHeroTitle } from "@/lib/render-hero-title";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -451,8 +452,8 @@ export default function LandingPageDinamica({
           situacao,
           motivo,
           tempo,
-          contexto_adicional: `${template.step5Question}: ${prioridade}`,
-          mensagem_lead: duvida.trim(),
+            contexto_adicional: `${template.step5Question}: ${prioridade}`.slice(0, 180),
+            mensagem_lead: duvida.trim().slice(0, 800),
           provas: provas.join(", "),
           ab_variant: abVariant,
           ab_session_id: abSessionId,
@@ -597,9 +598,7 @@ export default function LandingPageDinamica({
           </div>
 
           <h1 className="text-5xl md:text-7xl lg:text-[5rem] font-black text-slate-900 tracking-tighter leading-[1.05] mb-8">
-            {template.heroTitle && (
-              <span dangerouslySetInnerHTML={{ __html: template.heroTitle }} />
-            )}
+            {renderHeroTitle(template.heroTitle)}
           </h1>
           
           <p className="text-xl md:text-2xl text-slate-600 max-w-3xl mx-auto mb-12 leading-relaxed font-medium">

@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Lead } from "@/types";
 import { gerarMensagemPrimeiroAtendimento } from "@/lib/auto-atendimento";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 interface NotificacaoConfig {
   user_id: string;
@@ -169,6 +170,14 @@ async function enviarEmail(apiKey: string, destino: string, lead: Partial<Lead> 
 // ─── Handler principal ────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
+    const rateLimit = checkRateLimit(req, "notify-lead", 20, 10 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { message: "Muitas tentativas. Aguarde alguns minutos." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     const body = await req.json();
 
     // ── Modo teste (chamado pela página de configurações) ──
@@ -207,6 +216,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Payload inválido." }, { status: 400 });
     }
 
+    const leadSlug = String(lead.slug).trim().toLowerCase().slice(0, 80);
+    const leadNome = String(lead.nome ?? "").trim().slice(0, 120);
+    const leadTelefone = String(lead.telefone ?? "").trim().slice(0, 40);
+    const leadSituacao = String(lead.situacao ?? "").trim().slice(0, 180);
+    const leadMotivo = String(lead.motivo ?? "").trim().slice(0, 220);
+    const leadResumo = String(lead.resumo ?? "").trim().slice(0, 240);
+
+    if (!leadSlug || !leadNome || !leadTelefone) {
+      return NextResponse.json({ message: "Lead inválido." }, { status: 400 });
+    }
+
     const supabase = getSupabaseAdmin();
 
     // Em produção, o segredo do webhook é obrigatório para evitar abuso externo.
@@ -228,7 +248,7 @@ export async function POST(req: NextRequest) {
     const { data: tenant, error: tenantError } = await supabase
       .from("tenants")
       .select("user_id, ativo, nome")
-      .eq("slug", lead.slug)
+      .eq("slug", leadSlug)
       .single<TenantOwner>();
 
     if (tenantError || !tenant) {
@@ -255,7 +275,7 @@ export async function POST(req: NextRequest) {
     }
 
     const scoreEmoji: Record<string, string> = { Quente: "🔥", Morno: "🌡️", Frio: "❄️" };
-    const textoTelegram = `📩 *Novo Lead — JurisLeads*\n\n👤 *Nome:* ${lead.nome}\n📱 *Telefone:* ${lead.telefone}\n${scoreEmoji[lead.ia_score] ?? ""} *Score IA:* ${lead.ia_score}\n📋 *Situação:* ${lead.situacao ?? "—"}\n💬 *Motivo:* ${lead.motivo ?? "—"}${lead.resumo ? `\n\n_${lead.resumo}_` : ""}\n\n👉 [Responder no WhatsApp](https://wa.me/55${lead.telefone.replace(/\D/g, "")})`;
+    const textoTelegram = `📩 *Novo Lead — JurisLeads*\n\n👤 *Nome:* ${leadNome}\n📱 *Telefone:* ${leadTelefone}\n${scoreEmoji[lead.ia_score] ?? ""} *Score IA:* ${lead.ia_score}\n📋 *Situação:* ${leadSituacao || "—"}\n💬 *Motivo:* ${leadMotivo || "—"}${leadResumo ? `\n\n_${leadResumo}_` : ""}\n\n👉 [Responder no WhatsApp](https://wa.me/55${leadTelefone.replace(/\D/g, "")})`;
 
     const erros: string[] = [];
 
@@ -282,7 +302,7 @@ export async function POST(req: NextRequest) {
       try {
         const mensagemAutoAtendimento = gerarMensagemPrimeiroAtendimento(lead, tenant.nome);
         // A instância da Evolution é o slug do tenant
-        await enviarWhatsAppEvolution(lead.slug, lead.telefone, mensagemAutoAtendimento);
+        await enviarWhatsAppEvolution(leadSlug, leadTelefone, mensagemAutoAtendimento);
       } catch (e) {
         const message = e instanceof Error ? e.message : "Erro desconhecido";
         erros.push(`WhatsApp: ${message}`);
@@ -291,6 +311,10 @@ export async function POST(req: NextRequest) {
 
     const autoWebhookUrl = process.env.AUTOATENDIMENTO_WEBHOOK_URL?.trim();
     const autoWebhookSecret = process.env.AUTOATENDIMENTO_WEBHOOK_SECRET?.trim();
+
+    if (isProd && autoWebhookUrl && !autoWebhookSecret) {
+      return NextResponse.json({ message: "AUTOATENDIMENTO_WEBHOOK_SECRET não configurado." }, { status: 500 });
+    }
 
     if (autoWebhookUrl) {
       try {

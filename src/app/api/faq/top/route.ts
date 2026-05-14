@@ -5,6 +5,28 @@ import { AREA_TEMPLATES } from "@/lib/legal-area-templates";
 
 const MAX_FAQ_ITEMS = 6;
 
+function normalizeQuestion(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function isLikelyValidFaqQuestion(question: string) {
+  if (question.length < 10 || question.length > 180) return false;
+  if (!/[a-zA-ZÀ-ÿ]/.test(question)) return false;
+  if (!/[aeiouáéíóúâêôãõà]/i.test(question)) return false;
+
+  const lettersOnly = question.replace(/[^a-zA-ZÀ-ÿ]/g, "");
+  if (lettersOnly.length < 8) return false;
+
+  const uniqueLetters = new Set(lettersOnly.toLowerCase()).size;
+  if (uniqueLetters < 4) return false;
+
+  if (!/\s/.test(question) && !question.endsWith("?")) return false;
+
+  return true;
+}
+
 export async function GET(req: Request) {
   try {
     const supabase = createClient(
@@ -43,8 +65,15 @@ export async function GET(req: Request) {
       });
     }
 
+    const validSuggestions = (suggestions || [])
+      .map((s: { question: string; vote_count: number }) => ({
+        ...s,
+        question: normalizeQuestion(s.question),
+      }))
+      .filter((s: { question: string }) => isLikelyValidFaqQuestion(s.question));
+
     // Se há menos de 6 perguntas, adiciona as padrão
-    let faqItems = (suggestions || [])
+    let faqItems = validSuggestions
       .slice(0, MAX_FAQ_ITEMS)
       .map((s: { question: string; vote_count: number }, i: number) => ({
         question: s.question,
@@ -60,8 +89,8 @@ export async function GET(req: Request) {
 
     return Response.json({
       faqItems: faqItems.slice(0, MAX_FAQ_ITEMS),
-      source: suggestions && suggestions.length > 0 ? "ai_generated" : "default",
-      suggestion_count: suggestions?.length || 0,
+      source: validSuggestions.length > 0 ? "ai_generated" : "default",
+      suggestion_count: validSuggestions.length,
     });
   } catch (err) {
     console.error("Erro na rota:", err);
