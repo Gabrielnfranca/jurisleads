@@ -2,8 +2,29 @@ import type { AreaTemplate } from "@/lib/legal-area-templates";
 
 type OptionItem = { label: string; sublabel: string };
 type FaqItem = { question: string; answer: string };
+type TextOverrideKey =
+  | "heroBadge"
+  | "heroTitle"
+  | "heroSubtitle"
+  | "benefitsSectionTitle"
+  | "benefitsSectionSubtitle"
+  | "specialization"
+  | "benefit1Title"
+  | "benefit1Text"
+  | "benefit2Title"
+  | "benefit2Text"
+  | "benefit3Title"
+  | "benefit3Text"
+  | "step1Question"
+  | "step1Option1"
+  | "step1Option2"
+  | "step1Option3"
+  | "step2Question"
+  | "step3Question"
+  | "step4Question"
+  | "step5Question";
 
-const TEXT_FIELDS: Array<keyof AreaTemplate> = [
+const TEXT_FIELDS: TextOverrideKey[] = [
   "heroBadge",
   "heroTitle",
   "heroSubtitle",
@@ -69,7 +90,7 @@ export function sanitizeTemplateOverrides(raw: unknown): Partial<AreaTemplate> {
   for (const field of TEXT_FIELDS) {
     const cleaned = cleanText(input[field], 260);
     if (cleaned) {
-      output[field] = cleaned as AreaTemplate[typeof field];
+      output[field] = cleaned;
     }
   }
 
