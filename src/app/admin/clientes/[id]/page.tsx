@@ -42,6 +42,7 @@ interface AbVariantMetrics {
   morno: number;
   frio: number;
   completionRate: number;
+  steps: Record<1 | 2 | 3 | 4 | 5 | 6, number>;
 }
 
 interface AbMetricsResponse {
@@ -50,6 +51,15 @@ interface AbMetricsResponse {
     B: AbVariantMetrics;
   };
 }
+
+const QUIZ_STEPS: Array<{ key: 1 | 2 | 3 | 4 | 5 | 6; label: string }> = [
+  { key: 1, label: "Pergunta 1" },
+  { key: 2, label: "Pergunta 2" },
+  { key: 3, label: "Pergunta 3" },
+  { key: 4, label: "Pergunta 4" },
+  { key: 5, label: "Pergunta 5" },
+  { key: 6, label: "Contato final" },
+];
 
 type DateRange = "day" | "week" | "month";
 
@@ -110,6 +120,11 @@ export default function ClienteDetailPage() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [abMetrics, setAbMetrics] = useState<AbMetricsResponse | null>(null);
   const [abMetricsMessage, setAbMetricsMessage] = useState<string | null>(null);
+  const [variantDraft, setVariantDraft] = useState<string>("{}");
+  const [variantStatus, setVariantStatus] = useState<string | null>(null);
+  const [variantError, setVariantError] = useState<string | null>(null);
+  const [variantSaving, setVariantSaving] = useState(false);
+  const [variantSuggesting, setVariantSuggesting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("leads");
   const [dateRange, setDateRange] = useState<DateRange>("week");
   const [leadPage, setLeadPage] = useState(1);
@@ -220,6 +235,44 @@ export default function ClienteDetailPage() {
     };
   }, [dateRange, supabase, tenant?.slug]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadVariantDraft = async () => {
+      if (!tenant?.slug) return;
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) return;
+
+      try {
+        const res = await fetch(`/api/admin/landing-variants?slug=${encodeURIComponent(tenant.slug)}&variant=B`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (!res.ok) return;
+
+        const payload = await res.json();
+        if (cancelled) return;
+
+        const safe = payload?.overrides && typeof payload.overrides === "object" ? payload.overrides : {};
+        setVariantDraft(JSON.stringify(safe, null, 2));
+      } catch {
+        // noop
+      }
+    };
+
+    void loadVariantDraft();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, tenant?.slug]);
+
   const setField = (field: string, value: unknown) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -227,6 +280,111 @@ export default function ClienteDetailPage() {
     navigator.clipboard.writeText(text);
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 1800);
+  };
+
+  const handleSuggestVariant = async () => {
+    if (!tenant?.slug) return;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      router.push("/admin/login");
+      return;
+    }
+
+    const days = RANGE_OPTIONS.find((item) => item.id === dateRange)?.days || 7;
+
+    setVariantSuggesting(true);
+    setVariantError(null);
+    setVariantStatus(null);
+
+    try {
+      const res = await fetch("/api/admin/landing-variants/suggest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ slug: tenant.slug, days }),
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok) {
+        setVariantError(payload?.error || "Nao foi possivel gerar sugestao.");
+        return;
+      }
+
+      const safe = payload?.overrides && typeof payload.overrides === "object" ? payload.overrides : {};
+      setVariantDraft(JSON.stringify(safe, null, 2));
+      setVariantStatus("Sugestao da IA carregada. Revise e clique em Publicar variante B.");
+    } catch {
+      setVariantError("Nao foi possivel gerar sugestao agora.");
+    } finally {
+      setVariantSuggesting(false);
+    }
+  };
+
+  const handleSaveVariant = async () => {
+    if (!tenant?.slug) return;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      router.push("/admin/login");
+      return;
+    }
+
+    let parsed: unknown = {};
+    try {
+      parsed = variantDraft.trim() ? JSON.parse(variantDraft) : {};
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        setVariantError("O JSON deve ser um objeto.");
+        return;
+      }
+    } catch {
+      setVariantError("JSON invalido. Revise antes de salvar.");
+      return;
+    }
+
+    setVariantSaving(true);
+    setVariantError(null);
+    setVariantStatus(null);
+
+    try {
+      const res = await fetch("/api/admin/landing-variants", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          slug: tenant.slug,
+          variant: "B",
+          source: "admin",
+          overrides: parsed,
+        }),
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok) {
+        setVariantError(payload?.error || "Nao foi possivel salvar variante B.");
+        return;
+      }
+
+      const safe = payload?.overrides && typeof payload.overrides === "object" ? payload.overrides : {};
+      setVariantDraft(JSON.stringify(safe, null, 2));
+      setVariantStatus("Variante B publicada com sucesso.");
+    } catch {
+      setVariantError("Nao foi possivel salvar variante B.");
+    } finally {
+      setVariantSaving(false);
+    }
   };
 
   const platformHost = normalizeHost(baseUrl).replace(/^www\./, "");
@@ -264,6 +422,15 @@ export default function ClienteDetailPage() {
   const landingUrl = dominioCustomAtual && dominioCustomValido
     ? `https://${dominioCustomAtual}`
     : `${baseUrl}/${slugAtual}`;
+
+  const withQuery = (url: string, key: string, value: string) => {
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}${key}=${encodeURIComponent(value)}`;
+  };
+
+  const landingUrlA = withQuery(landingUrl, "ab", "A");
+  const landingUrlB = withQuery(landingUrl, "ab", "B");
+  const quickTestPair = `${landingUrlA}  |  ${landingUrlB}`;
 
   const crmUrl = `${baseUrl}/login`;
   const cnameTarget = "cname.vercel-dns.com";
@@ -536,6 +703,44 @@ export default function ClienteDetailPage() {
               </div>
             </div>
 
+            <div className="space-y-2 rounded-xl border border-slate-200 p-4 bg-slate-50">
+              <p className="text-sm font-black text-slate-900">Laboratorio A/B (IA)</p>
+              <p className="text-xs text-slate-600">
+                Gere uma sugestao de copy/perguntas para a variante B com base no funil real e publique sem editar codigo.
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={handleSuggestVariant} disabled={variantSuggesting}>
+                  {variantSuggesting ? "Gerando sugestao..." : "Gerar sugestao com IA"}
+                </Button>
+                <Button type="button" className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveVariant} disabled={variantSaving}>
+                  {variantSaving ? "Publicando..." : "Publicar variante B"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setVariantDraft("{}")}>
+                  Limpar rascunho
+                </Button>
+              </div>
+
+              <textarea
+                value={variantDraft}
+                onChange={(e) => setVariantDraft(e.target.value)}
+                className="w-full min-h-56 rounded-lg border border-slate-200 bg-white p-3 font-mono text-xs text-slate-800"
+                spellCheck={false}
+              />
+
+              {variantStatus && (
+                <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                  {variantStatus}
+                </p>
+              )}
+
+              {variantError && (
+                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {variantError}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label>Status da captacao</Label>
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -609,6 +814,54 @@ export default function ClienteDetailPage() {
                   <button onClick={() => copyToClipboard(crmUrl, "crm")} className="p-1 rounded hover:bg-slate-200">
                     {copiedField === "crm" ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
                   </button>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 space-y-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Teste A/B pronto para campanha</p>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <p className="text-sm text-slate-700 font-mono truncate flex-1">{landingUrlA}</p>
+                    <button onClick={() => copyToClipboard(landingUrlA, "landingA")} className="p-1 rounded hover:bg-slate-200">
+                      {copiedField === "landingA" ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <p className="text-sm text-slate-700 font-mono truncate flex-1">{landingUrlB}</p>
+                    <button onClick={() => copyToClipboard(landingUrlB, "landingB")} className="p-1 rounded hover:bg-slate-200">
+                      {copiedField === "landingB" ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => window.open(landingUrlA, "_blank", "noopener,noreferrer")}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg"
+                  >
+                    <ExternalLink className="w-4 h-4" /> Abrir variante A
+                  </button>
+                  <button
+                    onClick={() => window.open(landingUrlB, "_blank", "noopener,noreferrer")}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg"
+                  >
+                    <ExternalLink className="w-4 h-4" /> Abrir variante B
+                  </button>
+                  <button
+                    onClick={() => copyToClipboard(quickTestPair, "landingPair")}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg"
+                  >
+                    <Copy className="w-4 h-4" /> {copiedField === "landingPair" ? "Par copiado" : "Copiar par A/B"}
+                  </button>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-900 space-y-1">
+                  <p className="font-semibold">Como usar no tráfego:</p>
+                  <p>1) Crie dois anúncios com a mesma segmentação.</p>
+                  <p>2) Use o link com <span className="font-mono">?ab=A</span> no anúncio A e <span className="font-mono">?ab=B</span> no anúncio B.</p>
+                  <p>3) Compare na aba Leads e A/B qual converte melhor e em qual etapa houve maior abandono.</p>
                 </div>
               </div>
 
@@ -721,6 +974,19 @@ export default function ClienteDetailPage() {
                     <p>Taxa: <span className="font-bold text-blue-700">{abMetrics.variants.A.completionRate}%</span></p>
                     <p className="text-xs text-slate-500">Quente/Morno/Frio: {abMetrics.variants.A.quente}/{abMetrics.variants.A.morno}/{abMetrics.variants.A.frio}</p>
                   </div>
+                  <div className="mt-3 border-t border-slate-100 pt-3 space-y-1">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Avanço por etapa</p>
+                    {QUIZ_STEPS.map((step) => {
+                      const totalStarted = Math.max(1, abMetrics.variants.A.started);
+                      const progressed = abMetrics.variants.A.steps[step.key] || 0;
+                      const percent = Math.round((progressed / totalStarted) * 100);
+                      return (
+                        <p key={`A-${step.key}`} className="text-xs text-slate-600">
+                          {step.label}: <span className="font-semibold text-slate-900">{progressed}</span> ({percent}%)
+                        </p>
+                      );
+                    })}
+                  </div>
                 </article>
 
                 <article className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
@@ -730,6 +996,19 @@ export default function ClienteDetailPage() {
                     <p>Concluidos: <span className="font-bold text-slate-900">{abMetrics.variants.B.completed}</span></p>
                     <p>Taxa: <span className="font-bold text-blue-700">{abMetrics.variants.B.completionRate}%</span></p>
                     <p className="text-xs text-slate-500">Quente/Morno/Frio: {abMetrics.variants.B.quente}/{abMetrics.variants.B.morno}/{abMetrics.variants.B.frio}</p>
+                  </div>
+                  <div className="mt-3 border-t border-slate-100 pt-3 space-y-1">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Avanço por etapa</p>
+                    {QUIZ_STEPS.map((step) => {
+                      const totalStarted = Math.max(1, abMetrics.variants.B.started);
+                      const progressed = abMetrics.variants.B.steps[step.key] || 0;
+                      const percent = Math.round((progressed / totalStarted) * 100);
+                      return (
+                        <p key={`B-${step.key}`} className="text-xs text-slate-600">
+                          {step.label}: <span className="font-semibold text-slate-900">{progressed}</span> ({percent}%)
+                        </p>
+                      );
+                    })}
                   </div>
                 </article>
               </div>

@@ -57,8 +57,8 @@ type Variant = "A" | "B";
 
 function initVariantMetrics() {
   return {
-    A: { started: 0, completed: 0, quente: 0, morno: 0, frio: 0, steps: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } },
-    B: { started: 0, completed: 0, quente: 0, morno: 0, frio: 0, steps: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } },
+    A: { started: 0, completed: 0, quente: 0, morno: 0, frio: 0, steps: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } },
+    B: { started: 0, completed: 0, quente: 0, morno: 0, frio: 0, steps: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } },
   };
 }
 
@@ -119,8 +119,8 @@ export async function GET(req: NextRequest) {
   const startedSessions = { A: new Set<string>(), B: new Set<string>() };
   const completedSessions = { A: new Set<string>(), B: new Set<string>() };
   const stepSessions = {
-    A: { 1: new Set<string>(), 2: new Set<string>(), 3: new Set<string>(), 4: new Set<string>(), 5: new Set<string>() },
-    B: { 1: new Set<string>(), 2: new Set<string>(), 3: new Set<string>(), 4: new Set<string>(), 5: new Set<string>() },
+    A: { 1: new Set<string>(), 2: new Set<string>(), 3: new Set<string>(), 4: new Set<string>(), 5: new Set<string>(), 6: new Set<string>() },
+    B: { 1: new Set<string>(), 2: new Set<string>(), 3: new Set<string>(), 4: new Set<string>(), 5: new Set<string>(), 6: new Set<string>() },
   };
 
   for (const row of rows || []) {
@@ -128,13 +128,13 @@ export async function GET(req: NextRequest) {
     if (variant !== "A" && variant !== "B") continue;
 
     const sessionId = String(row.session_id || "");
-    const step = Number(row.step || 0) as 1 | 2 | 3 | 4 | 5;
+    const step = Number(row.step || 0) as 1 | 2 | 3 | 4 | 5 | 6;
 
     if (row.event_name === "started" && sessionId) {
       startedSessions[variant].add(sessionId);
     }
 
-    if (row.event_name === "step_view" && sessionId && [1, 2, 3, 4, 5].includes(step)) {
+    if (row.event_name === "step_view" && sessionId && [1, 2, 3, 4, 5, 6].includes(step)) {
       stepSessions[variant][step].add(sessionId);
     }
 
@@ -154,6 +154,7 @@ export async function GET(req: NextRequest) {
     metrics[variant].steps[3] = stepSessions[variant][3].size;
     metrics[variant].steps[4] = stepSessions[variant][4].size;
     metrics[variant].steps[5] = stepSessions[variant][5].size;
+    metrics[variant].steps[6] = stepSessions[variant][6].size;
   }
 
   const response = {

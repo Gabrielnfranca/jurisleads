@@ -1,8 +1,9 @@
 "use client";
 
 import { use, useState, useEffect, useMemo, useRef, type SVGProps } from "react";
-import { getAreaTemplate, getAreaTestimonials, type LegalAreaType, type Testimonial } from "@/lib/legal-area-templates";
+import { getAreaTemplateByVariant, getAreaTestimonials, type LegalAreaType, type Testimonial } from "@/lib/legal-area-templates";
 import { buildBrandThemeVars } from "@/lib/brand-theme";
+import { applyTemplateOverrides } from "@/lib/template-overrides";
 import { renderHeroTitle } from "@/lib/render-hero-title";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -270,7 +271,6 @@ export default function LandingPageDinamica({
   const nomeDisplay = tenant?.nome ?? "Escritório de Advocacia";
   const whatsappTenant = tenant?.whatsapp ?? "5511999999999";
   const areaJuridica = tenant?.area_juridica as LegalAreaType || "trabalhista";
-  const template = getAreaTemplate(areaJuridica);
   const brandThemeVars = useMemo(() => buildBrandThemeVars(tenant?.cor_primaria), [tenant?.cor_primaria]);
 
   const [started, setStarted] = useState(false);
@@ -296,6 +296,15 @@ export default function LandingPageDinamica({
   } | null>(null);
   const [abVariant, setAbVariant] = useState<"A" | "B">("A");
   const [abSessionId, setAbSessionId] = useState("");
+  const [variantOverrides, setVariantOverrides] = useState<Record<string, unknown> | null>(null);
+  const template = useMemo(
+    () =>
+      applyTemplateOverrides(
+        getAreaTemplateByVariant(areaJuridica, abVariant),
+        variantOverrides as Parameters<typeof applyTemplateOverrides>[1]
+      ),
+    [areaJuridica, abVariant, variantOverrides]
+  );
   const startedTrackedRef = useRef(false);
   const trackedStepsRef = useRef<Set<number>>(new Set());
 
@@ -306,10 +315,13 @@ export default function LandingPageDinamica({
     if (typeof window === "undefined") return;
 
     const storageKey = `ab:${slug}:${domain}`;
+    const forcedVariant = new URLSearchParams(window.location.search).get("ab");
     const existingVariant = window.localStorage.getItem(`${storageKey}:variant`) as "A" | "B" | null;
     const existingSession = window.localStorage.getItem(`${storageKey}:session`);
 
-    const variant = existingVariant === "A" || existingVariant === "B"
+    const variant = forcedVariant === "A" || forcedVariant === "B"
+      ? forcedVariant
+      : existingVariant === "A" || existingVariant === "B"
       ? existingVariant
       : (Math.random() < 0.5 ? "A" : "B");
     const sessionId = existingSession || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -320,6 +332,33 @@ export default function LandingPageDinamica({
     setAbVariant(variant);
     setAbSessionId(sessionId);
   }, [slug, domain]);
+
+  useEffect(() => {
+    if (!tenant?.slug) return;
+    let cancelled = false;
+
+    const loadVariantOverrides = async () => {
+      try {
+        const res = await fetch(
+          `/api/public/landing-variant?slug=${encodeURIComponent(tenant.slug)}&variant=${encodeURIComponent(abVariant)}`,
+          { cache: "no-store" }
+        );
+        const payload = await res.json();
+        if (!cancelled) {
+          setVariantOverrides(payload?.overrides && typeof payload.overrides === "object" ? payload.overrides : null);
+        }
+      } catch {
+        if (!cancelled) {
+          setVariantOverrides(null);
+        }
+      }
+    };
+
+    void loadVariantOverrides();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenant?.slug, abVariant]);
 
   const trackAbEvent = async (eventName: string, stepValue?: number) => {
     if (!abSessionId) return;

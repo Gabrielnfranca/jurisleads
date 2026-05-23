@@ -135,8 +135,8 @@
 }
 
 @layer utilities {
-  .brand-theme .bg-blue-600 { background-color: var(--brand-600) !important; }
-  .brand-theme .bg-blue-700 { background-color: var(--brand-700) !important; }
+  .brand-theme .bg-blue-600 { background-color: var(--brand-solid) !important; }
+  .brand-theme .bg-blue-700 { background-color: var(--brand-solid-hover) !important; }
   .brand-theme .bg-blue-100 { background-color: var(--brand-100) !important; }
   .brand-theme .bg-blue-50 { background-color: var(--brand-50) !important; }
   .brand-theme .bg-blue-50\/80 { background-color: var(--brand-50-80) !important; }
@@ -145,6 +145,11 @@
 
   .brand-theme .hover\:bg-blue-700:hover { background-color: var(--brand-700) !important; }
   .brand-theme .hover\:bg-blue-100:hover { background-color: var(--brand-100) !important; }
+
+  .brand-theme .bg-blue-600.text-white,
+  .brand-theme .bg-blue-700.text-white {
+    color: var(--brand-on-solid) !important;
+  }
 
   .brand-theme .text-blue-900 { color: var(--brand-900) !important; }
   .brand-theme .text-blue-800 { color: var(--brand-900) !important; }
@@ -164,8 +169,8 @@
   .brand-theme .hover\:border-blue-400:hover { border-color: var(--brand-300) !important; }
 
   .brand-theme .shadow-blue-500\/20 { --tw-shadow-color: var(--brand-shadow-soft) !important; }
-  .brand-theme .shadow-blue-600\/20 { --tw-shadow-color: var(--brand-shadow-soft) !important; }
-  .brand-theme .shadow-blue-600\/30 { --tw-shadow-color: var(--brand-shadow) !important; }
+  .brand-theme .shadow-blue-600\/20 { --tw-shadow-color: color-mix(in srgb, var(--brand-solid) 28%, transparent) !important; }
+  .brand-theme .shadow-blue-600\/30 { --tw-shadow-color: color-mix(in srgb, var(--brand-solid) 36%, transparent) !important; }
 
   .brand-theme .focus-visible\:ring-blue-600\/20:focus-visible { --tw-ring-color: var(--brand-ring) !important; }
   .brand-theme .focus-visible\:border-blue-600:focus-visible { border-color: var(--brand-600) !important; }

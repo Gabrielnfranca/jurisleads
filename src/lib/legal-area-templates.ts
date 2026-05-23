@@ -9,6 +9,8 @@ export type LegalAreaType =
   | "imobiliario"
   | "civil";
 
+export type LandingVariant = "A" | "B";
+
 export interface Testimonial {
   nome: string;
   cargo: string;
@@ -518,4 +520,54 @@ export function getAreaTestimonials(area: string | undefined, count = 12): Testi
 export function getAreaTemplate(area: string | undefined): AreaTemplate {
   const normalized = (area?.toLowerCase() || "trabalhista") as LegalAreaType;
   return AREA_TEMPLATES[normalized] || AREA_TEMPLATES.trabalhista;
+}
+
+const AREA_TEMPLATE_VARIANTS: Record<LandingVariant, Partial<Record<LegalAreaType, Partial<AreaTemplate>>>> = {
+  A: {},
+  B: {
+    trabalhista: {
+      heroBadge: "Mais de 500 trabalhadores já descobriram valores não recebidos.",
+      heroTitle: "Sua rescisão pode ter <span className=\"text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500\">erros que viram dinheiro</span>",
+      heroSubtitle:
+        "Responda perguntas objetivas e veja em menos de 1 minuto se há horas extras, FGTS ou verbas não pagas no seu caso.",
+      benefitsSectionTitle: "Diagnóstico rápido, decisão inteligente.",
+      benefitsSectionSubtitle:
+        "Fluxo simplificado para identificar chances reais de recuperar valores trabalhistas.",
+      step1Question: "Qual cenário melhor descreve seu momento profissional?",
+      step1Option1: "Fui dispensado(a) recentemente",
+      step1Option2: "Saí por conta própria",
+      step1Option3: "Ainda estou na empresa",
+      step2Question: "Qual foi o principal problema no trabalho?",
+      step2Options: [
+        { label: "Verbas da rescisão incompletas", sublabel: "Senti que valores ficaram para trás" },
+        { label: "Jornada acima do combinado", sublabel: "Trabalhei além do horário sem pagamento correto" },
+        { label: "FGTS com falhas", sublabel: "Depósitos ausentes ou inconsistentes" },
+        { label: "Descontos indevidos", sublabel: "Houve descontos sem explicação adequada" },
+        { label: "Pressão ou constrangimento", sublabel: "Ambiente hostil no dia a dia" },
+      ],
+      step3Question: "Quanto tempo durou esse vínculo?",
+      step5Question: "O que você quer resolver primeiro?",
+      step5Options: [
+        { label: "Confirmar se existe direito", sublabel: "Quero um parecer técnico inicial" },
+        { label: "Recuperar valores não pagos", sublabel: "Meu foco é financeiro" },
+        { label: "Agilidade no atendimento", sublabel: "Preciso de orientação rápida" },
+        { label: "Avaliar sem compromisso", sublabel: "Quero entender antes de decidir" },
+      ],
+    },
+  },
+};
+
+export function getAreaTemplateByVariant(
+  area: string | undefined,
+  variant: LandingVariant = "A"
+): AreaTemplate {
+  const baseTemplate = getAreaTemplate(area);
+  const normalizedVariant: LandingVariant = variant === "B" ? "B" : "A";
+  const normalizedArea = (area?.toLowerCase() || "trabalhista") as LegalAreaType;
+  const overrides = AREA_TEMPLATE_VARIANTS[normalizedVariant]?.[normalizedArea];
+  if (!overrides) return baseTemplate;
+  return {
+    ...baseTemplate,
+    ...overrides,
+  };
 }

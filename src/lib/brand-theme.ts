@@ -48,6 +48,28 @@ function withAlpha(hex: string, alpha: number): string {
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${clamp(alpha, 0, 1)})`;
 }
 
+function srgbChannelToLinear(value: number): number {
+  const normalized = value / 255;
+  if (normalized <= 0.04045) return normalized / 12.92;
+  return ((normalized + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance(hex: string): number {
+  const { r, g, b } = hexToRgb(hex);
+  const rl = srgbChannelToLinear(r);
+  const gl = srgbChannelToLinear(g);
+  const bl = srgbChannelToLinear(b);
+  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+}
+
+function contrastRatio(hexA: string, hexB: string): number {
+  const l1 = relativeLuminance(hexA);
+  const l2 = relativeLuminance(hexB);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR_REGEX.test(value.trim());
 }
@@ -62,6 +84,8 @@ export function buildBrandThemeVars(value: unknown): Record<string, string> {
   const baseHex = normalizeBrandColor(value);
   const baseRgb = hexToRgb(baseHex);
 
+  const solid = rgbToHex(mix(baseRgb, { r: 0, g: 0, b: 0 }, 0.26));
+  const solidHover = rgbToHex(mix(baseRgb, { r: 0, g: 0, b: 0 }, 0.4));
   const dark900 = rgbToHex(mix(baseRgb, { r: 0, g: 0, b: 0 }, 0.36));
   const dark700 = rgbToHex(mix(baseRgb, { r: 0, g: 0, b: 0 }, 0.18));
   const light500 = rgbToHex(mix(baseRgb, { r: 255, g: 255, b: 255 }, 0.08));
@@ -69,11 +93,17 @@ export function buildBrandThemeVars(value: unknown): Record<string, string> {
   const light200 = rgbToHex(mix(baseRgb, { r: 255, g: 255, b: 255 }, 0.76));
   const light100 = rgbToHex(mix(baseRgb, { r: 255, g: 255, b: 255 }, 0.88));
   const light50 = rgbToHex(mix(baseRgb, { r: 255, g: 255, b: 255 }, 0.94));
+  const white = "#ffffff";
+  const nearBlack = "#0f172a";
+  const onSolid = contrastRatio(solid, white) >= contrastRatio(solid, nearBlack) ? white : nearBlack;
 
   return {
     "--brand-900": dark900,
     "--brand-700": dark700,
     "--brand-600": baseHex,
+    "--brand-solid": solid,
+    "--brand-solid-hover": solidHover,
+    "--brand-on-solid": onSolid,
     "--brand-500": light500,
     "--brand-300": light300,
     "--brand-200": light200,

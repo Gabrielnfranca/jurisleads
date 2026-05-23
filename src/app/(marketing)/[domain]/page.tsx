@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AREA_TEMPLATES, getAreaTestimonials, type LegalAreaType, type Testimonial } from "@/lib/legal-area-templates";
+import { getAreaTemplateByVariant, getAreaTestimonials, type LegalAreaType, type Testimonial } from "@/lib/legal-area-templates";
 import { buildBrandThemeVars } from "@/lib/brand-theme";
+import { applyTemplateOverrides } from "@/lib/template-overrides";
 import { renderHeroTitle } from "@/lib/render-hero-title";
 import { 
   CheckCircle2, 
@@ -280,8 +281,6 @@ export default function LandingPageCaptacao() {
 
   const nomeDisplay = tenant?.nome ?? slug.replace(/^dr/i, "Dr. ").replace(/([a-z])([A-Z])/g, "$1 $2");
   const whatsappTenant = tenant?.whatsapp ?? "5511999999999";
-  // Template dinâmico pela área jurídica do tenant (fallback: trabalhista)
-  const tpl = AREA_TEMPLATES[(tenant?.area_juridica as LegalAreaType) ?? "trabalhista"] ?? AREA_TEMPLATES.trabalhista;
   const brandThemeVars = useMemo(() => buildBrandThemeVars(tenant?.cor_primaria), [tenant?.cor_primaria]);
 
   const [started, setStarted] = useState(false);
@@ -303,6 +302,15 @@ export default function LandingPageCaptacao() {
   } | null>(null);
   const [abVariant, setAbVariant] = useState<"A" | "B">("A");
   const [abSessionId, setAbSessionId] = useState("");
+  const [variantOverrides, setVariantOverrides] = useState<Record<string, unknown> | null>(null);
+  const tpl = useMemo(
+    () =>
+      applyTemplateOverrides(
+        getAreaTemplateByVariant(tenant?.area_juridica as LegalAreaType, abVariant),
+        variantOverrides as Parameters<typeof applyTemplateOverrides>[1]
+      ),
+    [tenant?.area_juridica, abVariant, variantOverrides]
+  );
   
   // FAQ Dinâmicas carregadas da IA
   const [dynamicFaqItems, setDynamicFaqItems] = useState<Array<{ question: string; answer: string }> | null>(null);
@@ -325,10 +333,13 @@ export default function LandingPageCaptacao() {
     if (typeof window === "undefined") return;
 
     const storageKey = `ab:${domainParam}`;
+    const forcedVariant = new URLSearchParams(window.location.search).get("ab");
     const existingVariant = window.localStorage.getItem(`${storageKey}:variant`) as "A" | "B" | null;
     const existingSession = window.localStorage.getItem(`${storageKey}:session`);
 
-    const variant = existingVariant === "A" || existingVariant === "B"
+    const variant = forcedVariant === "A" || forcedVariant === "B"
+      ? forcedVariant
+      : existingVariant === "A" || existingVariant === "B"
       ? existingVariant
       : (Math.random() < 0.5 ? "A" : "B");
 
@@ -340,6 +351,33 @@ export default function LandingPageCaptacao() {
     setAbVariant(variant);
     setAbSessionId(sessionId);
   }, [domainParam]);
+
+  useEffect(() => {
+    if (!tenant?.slug) return;
+    let cancelled = false;
+
+    const loadVariantOverrides = async () => {
+      try {
+        const res = await fetch(
+          `/api/public/landing-variant?slug=${encodeURIComponent(tenant.slug)}&variant=${encodeURIComponent(abVariant)}`,
+          { cache: "no-store" }
+        );
+        const payload = await res.json();
+        if (!cancelled) {
+          setVariantOverrides(payload?.overrides && typeof payload.overrides === "object" ? payload.overrides : null);
+        }
+      } catch {
+        if (!cancelled) {
+          setVariantOverrides(null);
+        }
+      }
+    };
+
+    void loadVariantOverrides();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenant?.slug, abVariant]);
 
   // Carrega FAQ dinâmicas baseadas em perguntas reais dos leads
   useEffect(() => {
