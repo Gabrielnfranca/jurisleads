@@ -24,6 +24,8 @@ import {
   Settings,
   Trash2,
   Users,
+  Plus,
+  HelpCircle,
 } from "lucide-react";
 import type { Lead } from "@/types";
 
@@ -1383,143 +1385,194 @@ export default function ClienteDetailPage() {
                   </div>
                 </article>
 
-                <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-4">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Editor rápido</p>
-                    <p className="text-sm text-slate-600 mt-1">Altere a variante B por aqui, incluindo novos itens, e veja o preview da esquerda atualizar.</p>
-                  </div>
-
-                  {parsedVariantDraft.error && (
-                    <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{parsedVariantDraft.error}</p>
-                  )}
-
-                  <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-4">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Hero</p>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Badge</Label>
-                      <Input value={editableTemplate.heroBadge} onChange={(e) => setDraftText("heroBadge", e.target.value)} />
+<aside className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-5 lg:w-96 flex-shrink-0">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">Editor Visual</p>
+                      <p className="text-sm text-slate-600 mt-1">Altere a variante B por aqui, adicionando ou removendo opções dinamicamente. Os resultados são em tempo real.</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Titulo</Label>
-                      <textarea value={editableTemplate.heroTitle} onChange={(e) => setDraftText("heroTitle", e.target.value)} className="w-full min-h-24 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Subtitulo</Label>
-                      <textarea value={editableTemplate.heroSubtitle} onChange={(e) => setDraftText("heroSubtitle", e.target.value)} className="w-full min-h-24 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-4">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Perguntas</p>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Pergunta 1</Label>
-                      <textarea value={editableTemplate.step1Question} onChange={(e) => setDraftText("step1Question", e.target.value)} className="w-full min-h-20 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                      <Label className="text-xs">Opções da pergunta 1</Label>
-                      {[0, 1, 2].map((idx) => (
-                        <Input
-                          key={`step1-opt-${idx}`}
-                          value={[editableTemplate.step1Option1, editableTemplate.step1Option2, editableTemplate.step1Option3][idx] || ""}
-                          onChange={(e) => setDraftText(`step1Option${idx + 1}`, e.target.value)}
-                          placeholder={`Opção ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <Label className="text-xs">Pergunta 2</Label>
-                      <textarea value={editableTemplate.step2Question} onChange={(e) => setDraftText("step2Question", e.target.value)} className="w-full min-h-20 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
-                      <p className="text-[11px] text-slate-500">Você pode adicionar quantas opções quiser.</p>
-                      {editableTemplate.step2Options.map((opt, idx) => (
-                        <div key={`step2-opt-${idx}`} className="flex items-center gap-2">
-                          <Input
-                            value={opt.label}
-                            onChange={(e) => setDraftOption("step2Options", idx, "label", e.target.value)}
-                            placeholder={`Opção ${idx + 1}`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeDraftOption("step2Options", idx)}
-                            className="px-2.5 py-2 text-xs font-bold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer"
-                          >
-                            Remover
-                          </button>
+  
+                    {parsedVariantDraft.error && (
+                      <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{parsedVariantDraft.error}</p>
+                    )}
+  
+                    <div className="space-y-4 bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                      <h3 className="font-semibold text-lg text-slate-800 flex items-center gap-2">
+                        <Palette className="w-5 h-5 text-indigo-500" />
+                        Hero Section
+                      </h3>
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs font-semibold text-slate-500 uppercase">Badge</Label>
+                          <Input value={editableTemplate.heroBadge} onChange={(e) => setDraftText("heroBadge", e.target.value)} className="bg-slate-50 focus-visible:ring-indigo-500" />
                         </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addDraftOption("step2Options")}
-                        className="px-3 py-2 text-xs font-bold text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer"
-                      >
-                        + Adicionar opção da pergunta 2
-                      </button>
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <Label className="text-xs">Pergunta 5</Label>
-                      <textarea value={editableTemplate.step5Question} onChange={(e) => setDraftText("step5Question", e.target.value)} className="w-full min-h-20 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
-                      {editableTemplate.step5Options.map((opt, idx) => (
-                        <div key={`step5-opt-${idx}`} className="flex items-center gap-2">
-                          <Input
-                            value={opt.label}
-                            onChange={(e) => setDraftOption("step5Options", idx, "label", e.target.value)}
-                            placeholder={`Opção ${idx + 1}`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeDraftOption("step5Options", idx)}
-                            className="px-2.5 py-2 text-xs font-bold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer"
-                          >
-                            Remover
-                          </button>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-semibold text-slate-500 uppercase">Titulo</Label>
+                          <textarea value={editableTemplate.heroTitle} onChange={(e) => setDraftText("heroTitle", e.target.value)} className="w-full min-h-24 rounded-lg border border-input bg-slate-50 p-3 text-sm text-slate-900 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y" />
                         </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addDraftOption("step5Options")}
-                        className="px-3 py-2 text-xs font-bold text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer"
-                      >
-                        + Adicionar opção da pergunta 5
-                      </button>
+                        <div className="space-y-1">
+                          <Label className="text-xs font-semibold text-slate-500 uppercase">Subtitulo</Label>
+                          <textarea value={editableTemplate.heroSubtitle} onChange={(e) => setDraftText("heroSubtitle", e.target.value)} className="w-full min-h-24 rounded-lg border border-input bg-slate-50 p-3 text-sm text-slate-900 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-4">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">FAQ</p>
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <Label className="text-xs">Perguntas e respostas</Label>
-                      {editableTemplate.faqItems.map((item, idx) => (
-                        <div key={`faq-opt-${idx}`} className="flex items-center gap-2">
-                          <div className="flex-1 space-y-2">
+  
+                    <div className="space-y-4 bg-indigo-50/50 border border-indigo-100 rounded-xl p-5 shadow-sm">
+                      <h3 className="font-semibold text-lg text-indigo-900 flex items-center gap-2">
+                        <MessageCircleQuestion className="w-5 h-5 text-indigo-600" />
+                        Perguntas do Quiz
+                      </h3>
+                      
+                      <div className="space-y-2 bg-white p-3 rounded-lg border shadow-sm">
+                        <Label className="text-sm font-semibold text-slate-800 block mb-1">1. Pergunta Inicial</Label>
+                        <textarea value={editableTemplate.step1Question} onChange={(e) => setDraftText("step1Question", e.target.value)} className="w-full min-h-16 rounded-md border border-input bg-slate-50 p-2 text-sm text-slate-900 font-medium focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y mb-2" />
+                        <div className="grid grid-cols-1 gap-2">
+                          {[0, 1, 2].map((idx) => (
                             <Input
-                              value={item.question}
-                              onChange={(e) => setDraftFaqItem(idx, "question", e.target.value)}
-                              placeholder={`Pergunta FAQ ${idx + 1}`}
+                              key={`step1-opt-${idx}`}
+                              value={[editableTemplate.step1Option1, editableTemplate.step1Option2, editableTemplate.step1Option3][idx] || ""}
+                              onChange={(e) => setDraftText(`step1Option${idx + 1}`, e.target.value)}
+                              placeholder={`Opção ${idx + 1}`}
+                              className="text-sm bg-slate-50 h-9"
                             />
-                            <textarea
-                              value={item.answer}
-                              onChange={(e) => setDraftFaqItem(idx, "answer", e.target.value)}
-                              placeholder={`Resposta FAQ ${idx + 1}`}
-                              className="w-full min-h-20 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeDraftFaqItem(idx)}
-                            className="px-2.5 py-2 text-xs font-bold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer"
-                          >
-                            Remover
-                          </button>
+                          ))}
                         </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={addDraftFaqItem}
-                        className="px-3 py-2 text-xs font-bold text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer"
-                      >
-                        + Adicionar item FAQ
-                      </button>
+                      </div>
+  
+                      <div className="space-y-2 bg-white p-3 rounded-lg border shadow-sm">
+                        <Label className="text-sm font-semibold text-slate-800 block mb-1">2. Benefícios Secundários</Label>
+                        <textarea value={editableTemplate.step2Question} onChange={(e) => setDraftText("step2Question", e.target.value)} className="w-full min-h-16 rounded-md border border-input bg-slate-50 p-2 text-sm text-slate-900 font-medium focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y mb-2" />
+                        <div className="space-y-2">
+                          {editableTemplate.step2Options.map((opt, idx) => (
+                            <div key={`step2-opt-${idx}`} className="flex items-start gap-2 bg-slate-50 p-2 rounded-md border border-slate-100">
+                              <div className="flex-1 space-y-2">
+                                <Input
+                                  value={opt.label}
+                                  onChange={(e) => setDraftOption("step2Options", idx, "label", e.target.value)}
+                                  placeholder={`Título Causa ${idx + 1}`}
+                                  className="h-8 text-sm bg-white"
+                                />
+                                <Input
+                                  value={opt.sublabel}
+                                  onChange={(e) => setDraftOption("step2Options", idx, "sublabel", e.target.value)}
+                                  placeholder={`Descrição (opcional)`}
+                                  className="h-8 text-xs bg-white text-slate-500"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeDraftOption("step2Options", idx)}
+                                className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addDraftOption("step2Options")}
+                            className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50 border-dashed mt-2"
+                          >
+                            <Plus className="w-4 h-4 mr-2" /> Adicionar Opção
+                          </Button>
+                        </div>
+                      </div>
+  
+                      <div className="space-y-2 bg-white p-3 rounded-lg border shadow-sm">
+                        <Label className="text-sm font-semibold text-slate-800 block mb-1">5. Motivação Auxiliar</Label>
+                        <textarea value={editableTemplate.step5Question} onChange={(e) => setDraftText("step5Question", e.target.value)} className="w-full min-h-16 rounded-md border border-input bg-slate-50 p-2 text-sm text-slate-900 font-medium focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y mb-2" />
+                        <div className="space-y-2">
+                          {editableTemplate.step5Options.map((opt, idx) => (
+                            <div key={`step5-opt-${idx}`} className="flex items-start gap-2 bg-slate-50 p-2 rounded-md border border-slate-100">
+                              <div className="flex-1 space-y-2">
+                                <Input
+                                  value={opt.label}
+                                  onChange={(e) => setDraftOption("step5Options", idx, "label", e.target.value)}
+                                  placeholder={`Título Opção ${idx + 1}`}
+                                  className="h-8 text-sm bg-white"
+                                />
+                                <Input
+                                  value={opt.sublabel}
+                                  onChange={(e) => setDraftOption("step5Options", idx, "sublabel", e.target.value)}
+                                  placeholder={`Descrição (opcional)`}
+                                  className="h-8 text-xs bg-white text-slate-500"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeDraftOption("step5Options", idx)}
+                                className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addDraftOption("step5Options")}
+                            className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50 border-dashed mt-2"
+                          >
+                            <Plus className="w-4 h-4 mr-2" /> Adicionar Opção
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+  
+                    <div className="space-y-4 bg-slate-800 border-[1.5px] border-slate-700 rounded-xl p-5 shadow-sm">
+                      <div>
+                        <h3 className="font-semibold text-lg text-white flex items-center gap-2">
+                          <HelpCircle className="w-5 h-5 text-indigo-400" />
+                          FAQ
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-1">Perguntas frequentes que aparecem no final da Landing Page para matar objeções.</p>
+                      </div>
+                      <div className="space-y-3">
+                        {editableTemplate.faqItems.map((item, idx) => (
+                          <div key={`faq-opt-${idx}`} className="bg-slate-700/50 p-3 rounded-lg border border-slate-600 space-y-2 relative group">
+                            <div className="flex justify-between items-center mb-1">
+                              <Label className="text-xs font-semibold text-slate-300">Dúvida {idx + 1}</Label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeDraftFaqItem(idx)}
+                                className="h-6 w-6 text-red-400 hover:text-white hover:bg-red-500/20 rounded"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <div className="space-y-2">
+                              <Input
+                                value={item.question}
+                                onChange={(e) => setDraftFaqItem(idx, "question", e.target.value)}
+                                placeholder={`Qual a dúvida?`}
+                                className="h-9 text-sm bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus-visible:ring-indigo-400"
+                              />
+                              <textarea
+                                value={item.answer}
+                                onChange={(e) => setDraftFaqItem(idx, "answer", e.target.value)}
+                                placeholder={`Insira a resposta aqui...`}
+                                className="w-full min-h-16 rounded-md border border-slate-600 bg-slate-900 p-2 text-sm text-white placeholder:text-slate-500 focus-visible:ring-1 focus-visible:ring-indigo-400 focus-visible:outline-none resize-y"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addDraftFaqItem}
+                          className="w-full bg-slate-800 text-slate-300 border-slate-600 hover:bg-slate-700 hover:text-white border-dashed mt-2"
+                        >
+                          <Plus className="w-4 h-4 mr-2" /> Adicionar Dúvida
+                        </Button>
                     </div>
                   </div>
 
