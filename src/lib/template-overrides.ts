@@ -95,7 +95,7 @@ export function sanitizeTemplateOverrides(raw: unknown): Partial<AreaTemplate> {
     const cleaned = cleanText(input[field], 260);
     if (cleaned) {
       // Remove HTML tags when saving (failsafe)
-      output[field] = cleaned.replace(/<span[^>]*>([^<]+)<\/span>/gi, "*$1*");
+      output[field] = cleaned.replace(/<span[^>]*>([^<]+)<\/span>/gi, "$1");
     }
   }
 
@@ -129,8 +129,8 @@ export function applyTemplateOverrides(baseTemplate: AreaTemplate, overrides: Pa
 
   // Force strip legacy HTML from all string fields that come from Database overrides
   for (const key of Object.keys(merged)) {
-    if (typeof (merged as Record<string, unknown>)[key] === "string") {
-      (merged as Record<string, unknown>)[key] = (merged as Record<string, unknown>)[key].replace(/<span[^>]*>([^<]+)<\/span>/gi, "*$1*");
+    if (typeof (merged as Record<string, string>)[key] === "string") {
+      (merged as Record<string, string>)[key] = (merged as Record<string, string>)[key].replace(/<[^>]*>?/gm, "").replace(/\*/g, "");
     }
   }
 

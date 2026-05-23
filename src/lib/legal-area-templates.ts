@@ -47,7 +47,7 @@ export interface AreaTemplate {
 export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
   trabalhista: {
     heroBadge: "Já recuperamos direitos de mais de 500 trabalhadores.",
-    heroTitle: "Você pode ter *dinheiro oculto* na sua rescisão de trabalho.",
+    heroTitle: "Você pode ter dinheiro oculto na sua rescisão de trabalho.",
     heroSubtitle: "Milhares de empresas erram (ou escondem) o cálculo real de verbas rescisórias, horas extras e FGTS. Responda a 4 perguntas simples e descubra agora se você deixou dinheiro para trás.",
     benefitsSectionTitle: "Traga a verdade à tona.",
     benefitsSectionSubtitle: "Um método validado legalmente, estritamente online e focado em fazer você recuperar o que é seu por suor.",
@@ -97,7 +97,7 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
 
   previdenciario: {
     heroBadge: "Já ajudamos mais de 500 brasileiros a conquistar sua aposentadoria.",
-    heroTitle: "Seu direito à aposentadoria pode ter sido *negado injustamente*",
+    heroTitle: "Seu direito à aposentadoria pode ter sido negado injustamente",
     heroSubtitle: "Muitos brasileiros têm o direito de se aposentar mas recebem negativas do INSS. Descubra em 4 passos se você pode conseguir sua aposentadoria agora.",
     benefitsSectionTitle: "Garanta o que você merece.",
     benefitsSectionSubtitle: "Uma solução digital completa para conquistar sua aposentadoria e benefícios do INSS sem burocracia.",
@@ -146,7 +146,7 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
 
   consumidor: {
     heroBadge: "Já recuperamos o dinheiro de mais de 500 consumidores lesados.",
-    heroTitle: "Você foi *enganado por uma empresa*? Pode recuperar seu dinheiro.",
+    heroTitle: "Você foi enganado por uma empresa? Pode recuperar seu dinheiro.",
     heroSubtitle: "Produtos com defeito, serviços não prestados, cobranças indevidas. Descubra se você tem direito a indenização e devolução do valor.",
     benefitsSectionTitle: "Seus direitos valem mais.",
     benefitsSectionSubtitle: "Resolução ágil online para cobrar das empresas o que prometeram e não cumpriram.",
@@ -195,7 +195,7 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
 
   familia: {
     heroBadge: "Já protegemos mais de 500 famílias brasileiras.",
-    heroTitle: "Questões familiares não precisam ser tão *complicadas e dolorosas*",
+    heroTitle: "Questões familiares não precisam ser tão complicadas e dolorosas",
     heroSubtitle: "Pensão alimentícia, guarda, separação, herança. Temos soluções ágeis que protegem você e seus filhos.",
     benefitsSectionTitle: "Proteja sua família com suporte.",
     benefitsSectionSubtitle: "Assessoria jurídica empática para resolver questões familiares sem desgastes desnecessários.",
@@ -244,7 +244,7 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
 
   criminal: {
     heroBadge: "Defendemos mais de 500 clientes em situações críticas.",
-    heroTitle: "Você foi acusado injustamente? Vamos *defender sua liberdade*",
+    heroTitle: "Você foi acusado injustamente? Vamos defender sua liberdade",
     heroSubtitle: "Seja para se defender de acusações, garantir direitos na prisão ou buscar liberdade provisória. Você não está sozinho.",
     benefitsSectionTitle: "Sua defesa começa agora.",
     benefitsSectionSubtitle: "Defesa imediata e estratégica para proteger sua liberdade e seus direitos constitucionais.",
@@ -293,7 +293,7 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
 
   tributario: {
     heroBadge: "Já economizamos impostos de mais de 500 empresas e pessoas físicas.",
-    heroTitle: "O fisco pode estar cobrando mais *do que você deve*",
+    heroTitle: "O fisco pode estar cobrando mais do que você deve",
     heroSubtitle: "Multas abusivas, juros indevidos, autuações erradas. Descubra se você tem direito a restituição ou anulação de débitos.",
     benefitsSectionTitle: "Economize no que é seu por direito.",
     benefitsSectionSubtitle: "Revisão especializada para eliminar cobranças indevidas e reduzir sua carga tributária.",
@@ -342,7 +342,7 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
 
   imobiliario: {
     heroBadge: "Já resolvemos mais de 500 casos de problemas imobiliários.",
-    heroTitle: "Seu imóvel ou sua *segurança habitacional* precisam de proteção",
+    heroTitle: "Seu imóvel ou sua segurança habitacional precisam de proteção",
     heroSubtitle: "Problemas com compra/venda, inquilinos inadimplentes, invasão ou despejo indevido. Temos soluções rápidas.",
     benefitsSectionTitle: "Seu imóvel, seus direitos.",
     benefitsSectionSubtitle: "Proteção jurídica completa para resolver questões de compra, venda, aluguel e construção.",
@@ -391,7 +391,7 @@ export const AREA_TEMPLATES: Record<LegalAreaType, AreaTemplate> = {
 
   civil: {
     heroBadge: "Já representamos mais de 500 clientes em ações cíveis.",
-    heroTitle: "Questões civis complexas merecem uma *solução especializada*",
+    heroTitle: "Questões civis complexas merecem uma solução especializada",
     heroSubtitle: "Contratos, indenizações, responsabilidade civil. Descubra como proteger seus direitos e interesses.",
     benefitsSectionTitle: "Resolva seus conflitos com eficiência.",
     benefitsSectionSubtitle: "Representação ágil e efetiva para resolver qualquer disputa civil ou patrimonial.",
@@ -527,7 +527,7 @@ const AREA_TEMPLATE_VARIANTS: Record<LandingVariant, Partial<Record<LegalAreaTyp
   B: {
     trabalhista: {
       heroBadge: "Mais de 500 trabalhadores já descobriram valores não recebidos.",
-      heroTitle: "Sua rescisão pode ter *erros que viram dinheiro*",
+      heroTitle: "Sua rescisão pode ter erros que viram dinheiro",
       heroSubtitle:
         "Responda perguntas objetivas e veja em menos de 1 minuto se há horas extras, FGTS ou verbas não pagas no seu caso.",
       benefitsSectionTitle: "Diagnóstico rápido, decisão inteligente.",
