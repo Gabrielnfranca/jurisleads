@@ -130,6 +130,7 @@ export default function ClienteDetailPage() {
   const [variantSaving, setVariantSaving] = useState(false);
   const [variantSuggesting, setVariantSuggesting] = useState(false);
   const [previewVariant, setPreviewVariant] = useState<"A" | "B">("A");
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("leads");
   const [dateRange, setDateRange] = useState<DateRange>("week");
   const [leadPage, setLeadPage] = useState(1);
@@ -737,98 +738,24 @@ export default function ClienteDetailPage() {
                 Gere uma sugestao de copy/perguntas para a variante B com base no funil real e publique sem editar codigo.
               </p>
 
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" onClick={handleSuggestVariant} disabled={variantSuggesting}>
-                      {variantSuggesting ? "Gerando sugestao..." : "Gerar sugestao com IA"}
-                    </Button>
-                    <Button type="button" className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveVariant} disabled={variantSaving}>
-                      {variantSaving ? "Publicando..." : "Publicar variante B"}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => setVariantDraft("{}")}>Limpar rascunho</Button>
-                  </div>
-
-                  <textarea
-                    value={variantDraft}
-                    onChange={(e) => setVariantDraft(e.target.value)}
-                    className="w-full min-h-56 rounded-lg border border-slate-200 bg-white p-3 font-mono text-xs text-slate-800"
-                    spellCheck={false}
-                  />
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={handleSuggestVariant} disabled={variantSuggesting}>
+                    {variantSuggesting ? "Gerando sugestao..." : "Gerar sugestao com IA"}
+                  </Button>
+                  <Button type="button" className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveVariant} disabled={variantSaving}>
+                    {variantSaving ? "Publicando..." : "Publicar variante B"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setVariantDraft("{}")}>Limpar rascunho</Button>
+                  <Button type="button" variant="outline" onClick={() => setActiveTab("links")}>Abrir preview em Links e Entrega</Button>
                 </div>
 
-                <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">Preview visual da landing</p>
-                    {parsedVariantDraft.error && <span className="text-[11px] text-red-600">{parsedVariantDraft.error}</span>}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewVariant("A")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                        previewVariant === "A" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      Teste A
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewVariant("B")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                        previewVariant === "B" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      Teste B
-                    </button>
-                    <span className="text-xs text-slate-500">
-                      Exibindo: <span className="font-semibold text-slate-700">{previewVariant === "A" ? "Variante A (controle)" : "Variante B (rascunho atual)"}</span>
-                    </span>
-                  </div>
-
-                  <article className="rounded-xl border border-slate-200 overflow-hidden" style={previewTheme}>
-                    <div className="p-4 border-b border-slate-100" style={{ backgroundColor: "var(--brand-50)" }}>
-                      <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: "var(--brand-100)", color: "var(--brand-900)" }}>
-                        {previewTemplate.heroBadge}
-                      </div>
-                      <h3 className="mt-3 text-xl font-black leading-tight text-slate-900">{renderHeroTitle(previewTemplate.heroTitle)}</h3>
-                      <p className="mt-2 text-sm text-slate-600">{previewTemplate.heroSubtitle}</p>
-
-                      <button
-                        type="button"
-                        className="mt-4 inline-flex items-center px-4 py-2 rounded-lg text-sm font-bold text-white"
-                        style={{ backgroundColor: "var(--brand-solid)", color: "var(--brand-on-solid)" }}
-                      >
-                        Iniciar Analise
-                      </button>
-                    </div>
-
-                    <div className="p-4 bg-white space-y-3">
-                      <div className="rounded-lg border border-slate-200 p-3">
-                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 1</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">{previewTemplate.step1Question}</p>
-                        <div className="mt-2 space-y-1 text-xs text-slate-600">
-                          <p>• {previewTemplate.step1Option1}</p>
-                          <p>• {previewTemplate.step1Option2}</p>
-                          <p>• {previewTemplate.step1Option3}</p>
-                        </div>
-                      </div>
-
-                      <div className="rounded-lg border border-slate-200 p-3">
-                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 2</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">{previewTemplate.step2Question}</p>
-                        <p className="mt-2 text-xs text-slate-600">Exemplo de opcao: {previewTemplate.step2Options[0]?.label || "-"}</p>
-                      </div>
-
-                      <div className="rounded-lg border border-slate-200 p-3">
-                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 5</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">{previewTemplate.step5Question}</p>
-                        <p className="mt-2 text-xs text-slate-600">Exemplo de opcao: {previewTemplate.step5Options[0]?.label || "-"}</p>
-                      </div>
-                    </div>
-                  </article>
-                </div>
+                <textarea
+                  value={variantDraft}
+                  onChange={(e) => setVariantDraft(e.target.value)}
+                  className="w-full min-h-56 rounded-lg border border-slate-200 bg-white p-3 font-mono text-xs text-slate-800"
+                  spellCheck={false}
+                />
               </div>
 
               {variantStatus && (
@@ -957,6 +884,12 @@ export default function ClienteDetailPage() {
                     className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg"
                   >
                     <Copy className="w-4 h-4" /> {copiedField === "landingPair" ? "Par copiado" : "Copiar par A/B"}
+                  </button>
+                  <button
+                    onClick={() => setPreviewModalOpen(true)}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg"
+                  >
+                    <ExternalLink className="w-4 h-4" /> Abrir preview visual A/B
                   </button>
                 </div>
 
@@ -1206,6 +1139,96 @@ export default function ClienteDetailPage() {
               )}
             </div>
           </section>
+        )}
+
+        {previewModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60" onClick={() => setPreviewModalOpen(false)} />
+            <div className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">Preview visual da landing</p>
+                  <p className="text-sm text-slate-600">Compare layout, texto e cores entre Teste A e Teste B.</p>
+                </div>
+                <Button variant="outline" onClick={() => setPreviewModalOpen(false)}>Fechar</Button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreviewVariant("A")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    previewVariant === "A" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Teste A
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewVariant("B")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    previewVariant === "B" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Teste B
+                </button>
+                <span className="text-xs text-slate-500">
+                  Exibindo: <span className="font-semibold text-slate-700">{previewVariant === "A" ? "Variante A (controle)" : "Variante B (rascunho atual)"}</span>
+                </span>
+                {parsedVariantDraft.error && <span className="text-[11px] text-red-600">{parsedVariantDraft.error}</span>}
+              </div>
+
+              <article className="rounded-2xl border border-slate-200 overflow-hidden" style={previewTheme}>
+                <div className="p-6 border-b border-slate-100" style={{ backgroundColor: "var(--brand-50)" }}>
+                  <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: "var(--brand-100)", color: "var(--brand-900)" }}>
+                    {previewTemplate.heroBadge}
+                  </div>
+                  <h3 className="mt-4 text-3xl font-black leading-tight text-slate-900">{renderHeroTitle(previewTemplate.heroTitle)}</h3>
+                  <p className="mt-3 text-lg text-slate-600 max-w-2xl">{previewTemplate.heroSubtitle}</p>
+
+                  <button
+                    type="button"
+                    className="mt-6 inline-flex items-center px-6 py-3 rounded-xl text-base font-bold"
+                    style={{ backgroundColor: "var(--brand-solid)", color: "var(--brand-on-solid)" }}
+                  >
+                    Iniciar Analise
+                  </button>
+                </div>
+
+                <div className="p-6 bg-white grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-slate-200 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 1</p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">{previewTemplate.step1Question}</p>
+                    <div className="mt-3 space-y-1 text-sm text-slate-600">
+                      <p>• {previewTemplate.step1Option1}</p>
+                      <p>• {previewTemplate.step1Option2}</p>
+                      <p>• {previewTemplate.step1Option3}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 2</p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">{previewTemplate.step2Question}</p>
+                    <div className="mt-3 space-y-1 text-sm text-slate-600">
+                      {previewTemplate.step2Options.slice(0, 3).map((opt, idx) => (
+                        <p key={`step2-preview-${idx}`}>• {opt.label}</p>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 5</p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">{previewTemplate.step5Question}</p>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
+                      {previewTemplate.step5Options.slice(0, 4).map((opt, idx) => (
+                        <p key={`step5-preview-${idx}`}>• {opt.label}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
         )}
       </div>
     </div>
