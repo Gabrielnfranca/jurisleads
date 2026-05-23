@@ -633,12 +633,12 @@ export default function LandingPageDinamica({
           </div>
         </header>
 
-        <main className="max-w-5xl mx-auto px-6 pt-12 pb-24 md:pt-24 md:pb-36 text-center relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <main className="max-w-6xl mx-auto px-6 pt-12 pb-24 md:pt-24 md:pb-36 text-center relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 border-amber-200/50 bg-amber-50/80 text-amber-900 text-sm font-bold mb-10 shadow-sm">
             <Star className="w-4 h-4 text-amber-500 fill-amber-500" /> {template.heroBadge}
           </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-[5rem] font-black text-slate-900 tracking-tighter leading-[1.05] mb-8">
+          <h1 className="text-[2.7rem] sm:text-6xl md:text-[4.25rem] lg:text-[5rem] font-black text-slate-900 tracking-tight leading-[1.08] md:leading-[1.04] mb-8">
             {renderHeroTitle(template.heroTitle)}
           </h1>
           
