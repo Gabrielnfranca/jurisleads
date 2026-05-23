@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-client";
+import { getAreaTemplateByVariant, type LegalAreaType } from "@/lib/legal-area-templates";
+import { applyTemplateOverrides, sanitizeTemplateOverrides } from "@/lib/template-overrides";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -435,6 +437,27 @@ export default function ClienteDetailPage() {
   const crmUrl = `${baseUrl}/login`;
   const cnameTarget = "cname.vercel-dns.com";
 
+  const areaAtual = (form.area_juridica || tenant?.area_juridica || "trabalhista") as LegalAreaType;
+  const templatePreviewA = useMemo(() => getAreaTemplateByVariant(areaAtual, "A"), [areaAtual]);
+
+  const parsedVariantDraft = useMemo(() => {
+    if (!variantDraft.trim()) return { data: {}, error: null as string | null };
+    try {
+      const raw = JSON.parse(variantDraft);
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        return { data: {}, error: "JSON deve ser um objeto." };
+      }
+      return { data: sanitizeTemplateOverrides(raw), error: null as string | null };
+    } catch {
+      return { data: {}, error: "JSON inválido para preview." };
+    }
+  }, [variantDraft]);
+
+  const templatePreviewB = useMemo(
+    () => applyTemplateOverrides(getAreaTemplateByVariant(areaAtual, "B"), parsedVariantDraft.data),
+    [areaAtual, parsedVariantDraft.data]
+  );
+
   const selectedRangeDays = RANGE_OPTIONS.find((item) => item.id === dateRange)?.days || 7;
 
   const filteredLeads = useMemo(() => {
@@ -703,30 +726,73 @@ export default function ClienteDetailPage() {
               </div>
             </div>
 
-            <div className="space-y-2 rounded-xl border border-slate-200 p-4 bg-slate-50">
+            <div className="space-y-3 rounded-xl border border-slate-200 p-4 bg-slate-50">
               <p className="text-sm font-black text-slate-900">Laboratorio A/B (IA)</p>
               <p className="text-xs text-slate-600">
                 Gere uma sugestao de copy/perguntas para a variante B com base no funil real e publique sem editar codigo.
               </p>
 
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={handleSuggestVariant} disabled={variantSuggesting}>
-                  {variantSuggesting ? "Gerando sugestao..." : "Gerar sugestao com IA"}
-                </Button>
-                <Button type="button" className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveVariant} disabled={variantSaving}>
-                  {variantSaving ? "Publicando..." : "Publicar variante B"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setVariantDraft("{}")}>
-                  Limpar rascunho
-                </Button>
-              </div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" onClick={handleSuggestVariant} disabled={variantSuggesting}>
+                      {variantSuggesting ? "Gerando sugestao..." : "Gerar sugestao com IA"}
+                    </Button>
+                    <Button type="button" className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveVariant} disabled={variantSaving}>
+                      {variantSaving ? "Publicando..." : "Publicar variante B"}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setVariantDraft("{}")}>Limpar rascunho</Button>
+                  </div>
 
-              <textarea
-                value={variantDraft}
-                onChange={(e) => setVariantDraft(e.target.value)}
-                className="w-full min-h-56 rounded-lg border border-slate-200 bg-white p-3 font-mono text-xs text-slate-800"
-                spellCheck={false}
-              />
+                  <textarea
+                    value={variantDraft}
+                    onChange={(e) => setVariantDraft(e.target.value)}
+                    className="w-full min-h-56 rounded-lg border border-slate-200 bg-white p-3 font-mono text-xs text-slate-800"
+                    spellCheck={false}
+                  />
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">Preview lateral (A x B)</p>
+                    {parsedVariantDraft.error && <span className="text-[11px] text-red-600">{parsedVariantDraft.error}</span>}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <article className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+                      <p className="font-black text-slate-700 uppercase tracking-wide">Variante A (controle)</p>
+                      <div>
+                        <p className="text-slate-500">Hero</p>
+                        <p className="font-semibold text-slate-900">{templatePreviewA.heroTitle}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Pergunta 1</p>
+                        <p className="font-medium text-slate-800">{templatePreviewA.step1Question}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Pergunta 2</p>
+                        <p className="font-medium text-slate-800">{templatePreviewA.step2Question}</p>
+                      </div>
+                    </article>
+
+                    <article className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-2">
+                      <p className="font-black text-blue-700 uppercase tracking-wide">Variante B (rascunho atual)</p>
+                      <div>
+                        <p className="text-slate-500">Hero</p>
+                        <p className="font-semibold text-slate-900">{templatePreviewB.heroTitle}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Pergunta 1</p>
+                        <p className="font-medium text-slate-800">{templatePreviewB.step1Question}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Pergunta 2</p>
+                        <p className="font-medium text-slate-800">{templatePreviewB.step2Question}</p>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </div>
 
               {variantStatus && (
                 <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">

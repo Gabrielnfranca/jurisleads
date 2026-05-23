@@ -565,7 +565,19 @@ export function getAreaTemplateByVariant(
   const normalizedVariant: LandingVariant = variant === "B" ? "B" : "A";
   const normalizedArea = (area?.toLowerCase() || "trabalhista") as LegalAreaType;
   const overrides = AREA_TEMPLATE_VARIANTS[normalizedVariant]?.[normalizedArea];
-  if (!overrides) return baseTemplate;
+  if (!overrides) {
+    if (normalizedVariant === "A") return baseTemplate;
+
+    // Fallback: garante diferença visível entre A e B mesmo sem override por área.
+    return {
+      ...baseTemplate,
+      heroBadge: `Analise expressa: ${baseTemplate.heroBadge}`,
+      heroSubtitle: `Resposta rapida e objetiva para seu caso. ${baseTemplate.heroSubtitle}`,
+      step1Question: `Para começar, ${baseTemplate.step1Question}`,
+      step2Question: `Agora vamos ao ponto principal: ${baseTemplate.step2Question}`,
+      step5Question: `Para priorizarmos seu atendimento: ${baseTemplate.step5Question}`,
+    };
+  }
   return {
     ...baseTemplate,
     ...overrides,
