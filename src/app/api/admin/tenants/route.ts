@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { isHexColor, normalizeBrandColor } from "@/lib/brand-theme";
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -164,6 +165,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (typeof cor_primaria === "string" && cor_primaria.trim() && !isHexColor(cor_primaria)) {
+    return NextResponse.json(
+      { error: "Cor primária inválida. Use um valor hexadecimal no formato #RRGGBB." },
+      { status: 400 }
+    );
+  }
+
   const slugNormalizado = slug.toLowerCase().trim();
 
   let slugFinal = slugNormalizado;
@@ -198,7 +206,7 @@ export async function POST(req: NextRequest) {
         nome,
         whatsapp,
         email,
-        cor_primaria: cor_primaria || "#2563eb",
+        cor_primaria: normalizeBrandColor(cor_primaria),
         area_juridica: area_juridica || "trabalhista",
         user_id: authData.user.id,
         ativo: true,

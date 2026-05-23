@@ -133,3 +133,54 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  .brand-theme .bg-blue-600 { background-color: var(--brand-600) !important; }
+  .brand-theme .bg-blue-700 { background-color: var(--brand-700) !important; }
+  .brand-theme .bg-blue-100 { background-color: var(--brand-100) !important; }
+  .brand-theme .bg-blue-50 { background-color: var(--brand-50) !important; }
+  .brand-theme .bg-blue-50\/80 { background-color: var(--brand-50-80) !important; }
+  .brand-theme .bg-blue-50\/50 { background-color: var(--brand-50-50) !important; }
+  .brand-theme .bg-blue-400\/10 { background-color: color-mix(in srgb, var(--brand-600) 14%, transparent) !important; }
+
+  .brand-theme .hover\:bg-blue-700:hover { background-color: var(--brand-700) !important; }
+  .brand-theme .hover\:bg-blue-100:hover { background-color: var(--brand-100) !important; }
+
+  .brand-theme .text-blue-900 { color: var(--brand-900) !important; }
+  .brand-theme .text-blue-800 { color: var(--brand-900) !important; }
+  .brand-theme .text-blue-700 { color: var(--brand-700) !important; }
+  .brand-theme .text-blue-600 { color: var(--brand-600) !important; }
+  .brand-theme .text-blue-500 { color: var(--brand-500) !important; }
+  .brand-theme .text-blue-300 { color: var(--brand-300) !important; }
+  .brand-theme .text-blue-200 { color: var(--brand-200) !important; }
+
+  .brand-theme .border-blue-600 { border-color: var(--brand-600) !important; }
+  .brand-theme .border-blue-400 { border-color: var(--brand-300) !important; }
+  .brand-theme .border-blue-300 { border-color: var(--brand-300) !important; }
+  .brand-theme .border-blue-200 { border-color: var(--brand-200) !important; }
+  .brand-theme .border-blue-100 { border-color: var(--brand-100) !important; }
+
+  .brand-theme .group-hover\:border-blue-400:hover { border-color: var(--brand-300) !important; }
+  .brand-theme .hover\:border-blue-400:hover { border-color: var(--brand-300) !important; }
+
+  .brand-theme .shadow-blue-500\/20 { --tw-shadow-color: var(--brand-shadow-soft) !important; }
+  .brand-theme .shadow-blue-600\/20 { --tw-shadow-color: var(--brand-shadow-soft) !important; }
+  .brand-theme .shadow-blue-600\/30 { --tw-shadow-color: var(--brand-shadow) !important; }
+
+  .brand-theme .focus-visible\:ring-blue-600\/20:focus-visible { --tw-ring-color: var(--brand-ring) !important; }
+  .brand-theme .focus-visible\:border-blue-600:focus-visible { border-color: var(--brand-600) !important; }
+
+  .brand-theme .from-blue-600 {
+    --tw-gradient-from: var(--brand-600) var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: rgba(255, 255, 255, 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .brand-theme .to-blue-700 {
+    --tw-gradient-to: var(--brand-700) var(--tw-gradient-to-position) !important;
+  }
+
+  .brand-theme .text-transparent.bg-clip-text.bg-gradient-to-r {
+    background-image: linear-gradient(to right, var(--brand-500), var(--brand-700)) !important;
+  }
+}

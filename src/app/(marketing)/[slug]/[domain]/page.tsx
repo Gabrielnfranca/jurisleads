@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useState, useEffect, useRef, type SVGProps } from "react";
+import { use, useState, useEffect, useMemo, useRef, type SVGProps } from "react";
 import { getAreaTemplate, getAreaTestimonials, type LegalAreaType, type Testimonial } from "@/lib/legal-area-templates";
+import { buildBrandThemeVars } from "@/lib/brand-theme";
 import { renderHeroTitle } from "@/lib/render-hero-title";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -270,6 +271,7 @@ export default function LandingPageDinamica({
   const whatsappTenant = tenant?.whatsapp ?? "5511999999999";
   const areaJuridica = tenant?.area_juridica as LegalAreaType || "trabalhista";
   const template = getAreaTemplate(areaJuridica);
+  const brandThemeVars = useMemo(() => buildBrandThemeVars(tenant?.cor_primaria), [tenant?.cor_primaria]);
 
   const [started, setStarted] = useState(false);
   const [step, setStep] = useState(1);
@@ -378,7 +380,7 @@ export default function LandingPageDinamica({
 
   if (tenantLoading) {
     return (
-      <div className="w-full min-h-screen bg-white flex items-center justify-center">
+      <div className="brand-theme w-full min-h-screen bg-white flex items-center justify-center" style={brandThemeVars}>
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin" />
           <p className="text-slate-400 font-medium">Carregando landing page...</p>
@@ -389,7 +391,7 @@ export default function LandingPageDinamica({
 
   if (tenantError || !tenant) {
     return (
-      <div className="w-full min-h-screen bg-white flex items-center justify-center px-6">
+      <div className="brand-theme w-full min-h-screen bg-white flex items-center justify-center px-6" style={brandThemeVars}>
         <div className="max-w-lg text-center space-y-4">
           <h1 className="text-3xl font-black text-slate-900">Landing page indisponível</h1>
           <p className="text-slate-500 font-medium">
@@ -506,7 +508,7 @@ export default function LandingPageDinamica({
       pontos_fortes: ["Caso encaminhado para análise especializada"],
     };
     return (
-      <div className="min-h-screen bg-slate-50 flex items-start justify-center p-4 pt-8 md:items-center font-sans border-t-8 border-blue-600">
+      <div className="brand-theme min-h-screen bg-slate-50 flex items-start justify-center p-4 pt-8 md:items-center font-sans border-t-8 border-blue-600" style={brandThemeVars}>
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-500">
           <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-7 md:p-8 text-white">
             <div className="flex items-center gap-4 mb-5">
@@ -566,7 +568,7 @@ export default function LandingPageDinamica({
 
   if (!started) {
     return (
-      <div className="w-full min-h-screen bg-white font-sans selection:bg-blue-100 relative overflow-x-hidden pb-16 md:pb-0">
+      <div className="brand-theme w-full min-h-screen bg-white font-sans selection:bg-blue-100 relative overflow-x-hidden pb-16 md:pb-0" style={brandThemeVars}>
         
         <div className="md:hidden fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-50 animate-in slide-in-from-bottom-5 shadow-2xl">
            <Button onClick={() => setStarted(true)} className="w-full h-16 text-lg font-extrabold bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg shadow-blue-500/20 active:scale-95 transition-transform">
@@ -685,7 +687,7 @@ export default function LandingPageDinamica({
   const progressPercent = loading ? 100 : ((step - 1) / STEPS) * 100;
 
   return (
-    <div className="min-h-screen bg-white font-sans selection:bg-blue-100 flex flex-col">
+    <div className="brand-theme min-h-screen bg-white font-sans selection:bg-blue-100 flex flex-col" style={brandThemeVars}>
       <header className="max-w-6xl mx-auto w-full px-6 h-20 md:h-24 flex items-center justify-between border-b border-slate-100 relative z-10 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">

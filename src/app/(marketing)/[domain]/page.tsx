@@ -1,11 +1,12 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef, type SVGProps } from "react";
+import { useState, useEffect, useMemo, useRef, type SVGProps } from "react";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AREA_TEMPLATES, getAreaTestimonials, type LegalAreaType, type Testimonial } from "@/lib/legal-area-templates";
+import { buildBrandThemeVars } from "@/lib/brand-theme";
 import { renderHeroTitle } from "@/lib/render-hero-title";
 import { 
   CheckCircle2, 
@@ -281,6 +282,7 @@ export default function LandingPageCaptacao() {
   const whatsappTenant = tenant?.whatsapp ?? "5511999999999";
   // Template dinâmico pela área jurídica do tenant (fallback: trabalhista)
   const tpl = AREA_TEMPLATES[(tenant?.area_juridica as LegalAreaType) ?? "trabalhista"] ?? AREA_TEMPLATES.trabalhista;
+  const brandThemeVars = useMemo(() => buildBrandThemeVars(tenant?.cor_primaria), [tenant?.cor_primaria]);
 
   const [started, setStarted] = useState(false);
 
@@ -396,7 +398,7 @@ export default function LandingPageCaptacao() {
 
   if (tenantLoading) {
     return (
-      <div className="w-full min-h-screen bg-white flex items-center justify-center">
+      <div className="brand-theme w-full min-h-screen bg-white flex items-center justify-center" style={brandThemeVars}>
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin" />
           <p className="text-slate-400 font-medium">Carregando landing page...</p>
@@ -407,7 +409,7 @@ export default function LandingPageCaptacao() {
 
   if (tenantError || !tenant) {
     return (
-      <div className="w-full min-h-screen bg-white flex items-center justify-center px-6">
+      <div className="brand-theme w-full min-h-screen bg-white flex items-center justify-center px-6" style={brandThemeVars}>
         <div className="max-w-lg text-center space-y-4">
           <h1 className="text-3xl font-black text-slate-900">Landing page indisponível</h1>
           <p className="text-slate-500 font-medium">
@@ -420,7 +422,7 @@ export default function LandingPageCaptacao() {
 
   if (!tenant.ativo) {
     return (
-      <div className="w-full min-h-screen bg-slate-100 flex items-center justify-center px-6 py-10">
+      <div className="brand-theme w-full min-h-screen bg-slate-100 flex items-center justify-center px-6 py-10" style={brandThemeVars}>
         <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm" />
         <div className="relative z-10 w-full max-w-xl rounded-3xl bg-white border border-slate-200 shadow-2xl p-7 sm:p-9 text-center space-y-5">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
@@ -549,7 +551,7 @@ export default function LandingPageCaptacao() {
       pontos_fortes: ["Irregularidades identificadas no seu relato", "Caso encaminhado para análise jurídica especializada"],
     };
     return (
-      <div className="min-h-screen bg-slate-50 flex items-start justify-center p-4 pt-8 md:items-center font-sans border-t-8 border-blue-600">
+      <div className="brand-theme min-h-screen bg-slate-50 flex items-start justify-center p-4 pt-8 md:items-center font-sans border-t-8 border-blue-600" style={brandThemeVars}>
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-500">
           {/* Header gradiente */}
           <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-7 md:p-8 text-white">
@@ -612,7 +614,7 @@ export default function LandingPageCaptacao() {
   // ===== PÁGINA DE VENDA / CAPTAÇÃO (LANDING PAGE) =====
   if (!started) {
     return (
-      <div className="w-full min-h-screen bg-white font-sans selection:bg-blue-100 relative overflow-x-hidden pb-16 md:pb-0">
+      <div className="brand-theme w-full min-h-screen bg-white font-sans selection:bg-blue-100 relative overflow-x-hidden pb-16 md:pb-0" style={brandThemeVars}>
         
         {/* Mobile CTA (Sticky Footer) */}
         <div className="md:hidden fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200 z-50 animate-in slide-in-from-bottom-5 shadow-2xl">
@@ -741,7 +743,7 @@ export default function LandingPageCaptacao() {
   const progressPercent = loading ? 100 : ((step - 1) / STEPS) * 100;
 
   return (
-    <div className="min-h-screen bg-white font-sans selection:bg-blue-100 flex flex-col">
+    <div className="brand-theme min-h-screen bg-white font-sans selection:bg-blue-100 flex flex-col" style={brandThemeVars}>
       {/* Header Fixo como na Home */}
       <header className="max-w-6xl mx-auto w-full px-6 h-20 md:h-24 flex items-center justify-between border-b border-slate-100 relative z-10 shrink-0">
           <div className="flex items-center gap-4">
