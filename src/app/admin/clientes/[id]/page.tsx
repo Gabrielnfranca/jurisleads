@@ -462,8 +462,109 @@ export default function ClienteDetailPage() {
     () => applyTemplateOverrides(getAreaTemplateByVariant(areaAtual, "B"), parsedVariantDraft.data),
     [areaAtual, parsedVariantDraft.data]
   );
+  const editableTemplate = templatePreviewB;
   const previewTemplate = previewVariant === "A" ? templatePreviewA : templatePreviewB;
   const previewTheme = useMemo(() => buildBrandThemeVars(form.cor_primaria || tenant?.cor_primaria), [form.cor_primaria, tenant?.cor_primaria]);
+
+  const setDraftValue = (updater: (draft: Record<string, unknown>) => Record<string, unknown>) => {
+    try {
+      const current = variantDraft.trim() ? JSON.parse(variantDraft) : {};
+      const safeCurrent = current && typeof current === "object" && !Array.isArray(current) ? (current as Record<string, unknown>) : {};
+      const next = updater({ ...safeCurrent });
+      setVariantDraft(JSON.stringify(next, null, 2));
+      setVariantError(null);
+    } catch {
+      const next = updater({});
+      setVariantDraft(JSON.stringify(next, null, 2));
+      setVariantError(null);
+    }
+  };
+
+  const setDraftText = (key: string, value: string) => {
+    setDraftValue((draft) => ({ ...draft, [key]: value }));
+  };
+
+  const getFallbackOptions = (section: "step2Options" | "step5Options") => {
+    const source = editableTemplate[section];
+    if (!Array.isArray(source)) return [];
+    return source.map((item) => ({
+      label: typeof item?.label === "string" ? item.label : "",
+      sublabel: typeof item?.sublabel === "string" ? item.sublabel : "",
+    }));
+  };
+
+  const setDraftOption = (section: "step2Options" | "step5Options", index: number, key: "label" | "sublabel", value: string) => {
+    setDraftValue((draft) => {
+      const current = Array.isArray(draft[section])
+        ? [...(draft[section] as Array<Record<string, unknown>>)]
+        : (getFallbackOptions(section) as Array<Record<string, unknown>>);
+      while (current.length <= index) current.push({ label: "", sublabel: "" });
+      current[index] = { ...current[index], [key]: value };
+      return { ...draft, [section]: current };
+    });
+  };
+
+  const addDraftOption = (section: "step2Options" | "step5Options") => {
+    setDraftValue((draft) => {
+      const current = Array.isArray(draft[section])
+        ? [...(draft[section] as Array<Record<string, unknown>>)]
+        : (getFallbackOptions(section) as Array<Record<string, unknown>>);
+      current.push({ label: "", sublabel: "" });
+      return { ...draft, [section]: current };
+    });
+  };
+
+  const removeDraftOption = (section: "step2Options" | "step5Options", index: number) => {
+    setDraftValue((draft) => {
+      const current = Array.isArray(draft[section])
+        ? [...(draft[section] as Array<Record<string, unknown>>)]
+        : (getFallbackOptions(section) as Array<Record<string, unknown>>);
+      if (index < 0 || index >= current.length) return draft;
+      current.splice(index, 1);
+      return { ...draft, [section]: current };
+    });
+  };
+
+  const setDraftFaqItem = (index: number, key: "question" | "answer", value: string) => {
+    setDraftValue((draft) => {
+      const fallback = Array.isArray(editableTemplate.faqItems)
+        ? editableTemplate.faqItems.map((item) => ({ question: item.question, answer: item.answer }))
+        : [];
+      const current = Array.isArray(draft.faqItems)
+        ? [...(draft.faqItems as Array<Record<string, unknown>>)]
+        : [...fallback];
+      while (current.length <= index) current.push({ question: "", answer: "" });
+      current[index] = { ...current[index], [key]: value };
+      return { ...draft, faqItems: current };
+    });
+  };
+
+  const addDraftFaqItem = () => {
+    setDraftValue((draft) => {
+      const fallback = Array.isArray(editableTemplate.faqItems)
+        ? editableTemplate.faqItems.map((item) => ({ question: item.question, answer: item.answer }))
+        : [];
+      const current = Array.isArray(draft.faqItems)
+        ? [...(draft.faqItems as Array<Record<string, unknown>>)]
+        : [...fallback];
+      current.push({ question: "", answer: "" });
+      return { ...draft, faqItems: current };
+    });
+  };
+
+  const removeDraftFaqItem = (index: number) => {
+    setDraftValue((draft) => {
+      const fallback = Array.isArray(editableTemplate.faqItems)
+        ? editableTemplate.faqItems.map((item) => ({ question: item.question, answer: item.answer }))
+        : [];
+      const current = Array.isArray(draft.faqItems)
+        ? [...(draft.faqItems as Array<Record<string, unknown>>)]
+        : [...fallback];
+      if (index < 0 || index >= current.length) return draft;
+      current.splice(index, 1);
+      return { ...draft, faqItems: current };
+    });
+  };
 
   const selectedRangeDays = RANGE_OPTIONS.find((item) => item.id === dateRange)?.days || 7;
 
@@ -1181,89 +1282,268 @@ export default function ClienteDetailPage() {
         {previewModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60" onClick={() => setPreviewModalOpen(false)} />
-            <div className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4">
+            <div className="relative w-full max-w-7xl max-h-[92vh] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">Preview visual da landing</p>
-                  <p className="text-sm text-slate-600">Compare layout, texto e cores entre Teste A e Teste B.</p>
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">Editor visual A/B</p>
+                  <p className="text-sm text-slate-600">Edite texto e perguntas no painel da direita e veja o preview atualizar na hora.</p>
+                  <span className="mt-2 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700">
+                    Novo: edição dentro do modal ativa
+                  </span>
                 </div>
                 <Button variant="outline" onClick={() => setPreviewModalOpen(false)}>Fechar</Button>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPreviewVariant("A")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                    previewVariant === "A" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  Teste A
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewVariant("B")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                    previewVariant === "B" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  Teste B
-                </button>
-                <span className="text-xs text-slate-500">
-                  Exibindo: <span className="font-semibold text-slate-700">{previewVariant === "A" ? "Variante A (controle)" : "Variante B (rascunho atual)"}</span>
-                </span>
-                {parsedVariantDraft.error && <span className="text-[11px] text-red-600">{parsedVariantDraft.error}</span>}
+              <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-5">
+                <article className="rounded-2xl border border-slate-200 overflow-hidden min-h-[720px]" style={previewTheme}>
+                  <div className="p-6 border-b border-slate-100" style={{ backgroundColor: "var(--brand-50)" }}>
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewVariant("A")}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            previewVariant === "A" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          }`}
+                        >
+                          Teste A
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewVariant("B")}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            previewVariant === "B" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          }`}
+                        >
+                          Teste B
+                        </button>
+                      </div>
+                      <span className="text-xs text-slate-500">
+                        {previewVariant === "A" ? "Controle" : "Rascunho atual"}
+                      </span>
+                    </div>
+
+                    <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: "var(--brand-100)", color: "var(--brand-900)" }}>
+                      {previewTemplate.heroBadge}
+                    </div>
+                    <h3 className="mt-4 text-4xl font-black leading-tight text-slate-900 max-w-2xl">{renderHeroTitle(previewTemplate.heroTitle)}</h3>
+                    <p className="mt-3 text-lg text-slate-600 max-w-2xl">{previewTemplate.heroSubtitle}</p>
+
+                    <div className="mt-6 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        className="inline-flex items-center px-6 py-3 rounded-xl text-base font-bold cursor-pointer"
+                        style={{ backgroundColor: "var(--brand-solid)", color: "var(--brand-on-solid)" }}
+                      >
+                        Iniciar Analise
+                      </button>
+                      <span className="text-sm text-slate-500">Preview real da landing, com cor e contraste da marca.</span>
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-white space-y-4">
+                    <div className="rounded-xl border border-slate-200 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 1</p>
+                      <p className="mt-1 text-lg font-semibold text-slate-900">{previewTemplate.step1Question}</p>
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-600">
+                        <p>• {previewTemplate.step1Option1}</p>
+                        <p>• {previewTemplate.step1Option2}</p>
+                        <p>• {previewTemplate.step1Option3}</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 2</p>
+                      <p className="mt-1 text-lg font-semibold text-slate-900">{previewTemplate.step2Question}</p>
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-600">
+                        {previewTemplate.step2Options.map((opt, idx) => (
+                          <p key={`step2-preview-${idx}`}>• {opt.label}</p>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 5</p>
+                      <p className="mt-1 text-lg font-semibold text-slate-900">{previewTemplate.step5Question}</p>
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-600">
+                        {previewTemplate.step5Options.map((opt, idx) => (
+                          <p key={`step5-preview-${idx}`}>• {opt.label}</p>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">FAQ</p>
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-600">
+                        {previewTemplate.faqItems.slice(0, 5).map((item, idx) => (
+                          <p key={`faq-preview-${idx}`}>• {item.question}</p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Editor rápido</p>
+                    <p className="text-sm text-slate-600 mt-1">Altere a variante B por aqui, incluindo novos itens, e veja o preview da esquerda atualizar.</p>
+                  </div>
+
+                  {parsedVariantDraft.error && (
+                    <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{parsedVariantDraft.error}</p>
+                  )}
+
+                  <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-4">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Hero</p>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Badge</Label>
+                      <Input value={editableTemplate.heroBadge} onChange={(e) => setDraftText("heroBadge", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Titulo</Label>
+                      <textarea value={editableTemplate.heroTitle} onChange={(e) => setDraftText("heroTitle", e.target.value)} className="w-full min-h-24 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Subtitulo</Label>
+                      <textarea value={editableTemplate.heroSubtitle} onChange={(e) => setDraftText("heroSubtitle", e.target.value)} className="w-full min-h-24 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-4">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Perguntas</p>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Pergunta 1</Label>
+                      <textarea value={editableTemplate.step1Question} onChange={(e) => setDraftText("step1Question", e.target.value)} className="w-full min-h-20 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Label className="text-xs">Opções da pergunta 1</Label>
+                      {[0, 1, 2].map((idx) => (
+                        <Input
+                          key={`step1-opt-${idx}`}
+                          value={[editableTemplate.step1Option1, editableTemplate.step1Option2, editableTemplate.step1Option3][idx] || ""}
+                          onChange={(e) => setDraftText(`step1Option${idx + 1}`, e.target.value)}
+                          placeholder={`Opção ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                      <Label className="text-xs">Pergunta 2</Label>
+                      <textarea value={editableTemplate.step2Question} onChange={(e) => setDraftText("step2Question", e.target.value)} className="w-full min-h-20 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
+                      <p className="text-[11px] text-slate-500">Você pode adicionar quantas opções quiser.</p>
+                      {editableTemplate.step2Options.map((opt, idx) => (
+                        <div key={`step2-opt-${idx}`} className="flex items-center gap-2">
+                          <Input
+                            value={opt.label}
+                            onChange={(e) => setDraftOption("step2Options", idx, "label", e.target.value)}
+                            placeholder={`Opção ${idx + 1}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeDraftOption("step2Options", idx)}
+                            className="px-2.5 py-2 text-xs font-bold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addDraftOption("step2Options")}
+                        className="px-3 py-2 text-xs font-bold text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer"
+                      >
+                        + Adicionar opção da pergunta 2
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                      <Label className="text-xs">Pergunta 5</Label>
+                      <textarea value={editableTemplate.step5Question} onChange={(e) => setDraftText("step5Question", e.target.value)} className="w-full min-h-20 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900" />
+                      {editableTemplate.step5Options.map((opt, idx) => (
+                        <div key={`step5-opt-${idx}`} className="flex items-center gap-2">
+                          <Input
+                            value={opt.label}
+                            onChange={(e) => setDraftOption("step5Options", idx, "label", e.target.value)}
+                            placeholder={`Opção ${idx + 1}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeDraftOption("step5Options", idx)}
+                            className="px-2.5 py-2 text-xs font-bold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addDraftOption("step5Options")}
+                        className="px-3 py-2 text-xs font-bold text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer"
+                      >
+                        + Adicionar opção da pergunta 5
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-4">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">FAQ</p>
+                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                      <Label className="text-xs">Perguntas e respostas</Label>
+                      {editableTemplate.faqItems.map((item, idx) => (
+                        <div key={`faq-opt-${idx}`} className="flex items-center gap-2">
+                          <div className="flex-1 space-y-2">
+                            <Input
+                              value={item.question}
+                              onChange={(e) => setDraftFaqItem(idx, "question", e.target.value)}
+                              placeholder={`Pergunta FAQ ${idx + 1}`}
+                            />
+                            <textarea
+                              value={item.answer}
+                              onChange={(e) => setDraftFaqItem(idx, "answer", e.target.value)}
+                              placeholder={`Resposta FAQ ${idx + 1}`}
+                              className="w-full min-h-20 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeDraftFaqItem(idx)}
+                            className="px-2.5 py-2 text-xs font-bold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={addDraftFaqItem}
+                        className="px-3 py-2 text-xs font-bold text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer"
+                      >
+                        + Adicionar item FAQ
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button type="button" variant="outline" onClick={handleSuggestVariant} disabled={variantSuggesting}>
+                      {variantSuggesting ? "Gerando sugestao..." : "Gerar sugestao com IA"}
+                    </Button>
+                    <Button type="button" className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveVariant} disabled={variantSaving}>
+                      {variantSaving ? "Publicando..." : "Publicar variante B"}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setVariantDraft("{}")}>
+                      Resetar rascunho
+                    </Button>
+                  </div>
+
+                  {variantStatus && (
+                    <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">{variantStatus}</p>
+                  )}
+
+                  {variantError && (
+                    <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{variantError}</p>
+                  )}
+                </aside>
               </div>
-
-              <article className="rounded-2xl border border-slate-200 overflow-hidden" style={previewTheme}>
-                <div className="p-6 border-b border-slate-100" style={{ backgroundColor: "var(--brand-50)" }}>
-                  <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: "var(--brand-100)", color: "var(--brand-900)" }}>
-                    {previewTemplate.heroBadge}
-                  </div>
-                  <h3 className="mt-4 text-3xl font-black leading-tight text-slate-900">{renderHeroTitle(previewTemplate.heroTitle)}</h3>
-                  <p className="mt-3 text-lg text-slate-600 max-w-2xl">{previewTemplate.heroSubtitle}</p>
-
-                  <button
-                    type="button"
-                    className="mt-6 inline-flex items-center px-6 py-3 rounded-xl text-base font-bold"
-                    style={{ backgroundColor: "var(--brand-solid)", color: "var(--brand-on-solid)" }}
-                  >
-                    Iniciar Analise
-                  </button>
-                </div>
-
-                <div className="p-6 bg-white grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-slate-200 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 1</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">{previewTemplate.step1Question}</p>
-                    <div className="mt-3 space-y-1 text-sm text-slate-600">
-                      <p>• {previewTemplate.step1Option1}</p>
-                      <p>• {previewTemplate.step1Option2}</p>
-                      <p>• {previewTemplate.step1Option3}</p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 2</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">{previewTemplate.step2Question}</p>
-                    <div className="mt-3 space-y-1 text-sm text-slate-600">
-                      {previewTemplate.step2Options.slice(0, 3).map((opt, idx) => (
-                        <p key={`step2-preview-${idx}`}>• {opt.label}</p>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 p-4 md:col-span-2">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 5</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">{previewTemplate.step5Question}</p>
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
-                      {previewTemplate.step5Options.slice(0, 4).map((opt, idx) => (
-                        <p key={`step5-preview-${idx}`}>• {opt.label}</p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </article>
             </div>
           </div>
         )}
