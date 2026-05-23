@@ -1399,13 +1399,13 @@ export default function ClienteDetailPage() {
     )}
     
     <div className="flex bg-slate-100 p-1 mt-5 rounded-lg">
-      <button type="button" onClick={() => setEditorTab("textos")} className={`flex-1 text-xs font-bold py-2 rounded-md transition-all ${editorTab === 'textos' ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>P�gina</button>
+      <button type="button" onClick={() => setEditorTab("textos")} className={`flex-1 text-xs font-bold py-2 rounded-md transition-all ${editorTab === 'textos' ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>Página</button>
       <button type="button" onClick={() => setEditorTab("quiz")} className={`flex-1 text-xs font-bold py-2 rounded-md transition-all ${editorTab === 'quiz' ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>Perguntas</button>
       <button type="button" onClick={() => setEditorTab("faq")} className={`flex-1 text-xs font-bold py-2 rounded-md transition-all ${editorTab === 'faq' ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>FAQ</button>
     </div>
   </div>
 
-  {/* Corpo Rol�vel */}
+  {/* Corpo Rolável */}
   <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-6">
     {editorTab === "textos" && (
       <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -1419,12 +1419,12 @@ export default function ClienteDetailPage() {
             <Input value={editableTemplate.heroBadge || ""} onChange={(e) => setDraftText("heroBadge", e.target.value)} className="bg-slate-50 focus-visible:ring-indigo-500 shadow-inner" placeholder="Ex: Atendimento 24h" />
           </div>
           <div className="space-y-1 mt-3">
-            <Label className="text-xs font-bold text-slate-500 uppercase flex items-center justify-between">T�tulo Principal <span className="normal-case text-[10px] text-slate-400 font-normal">Use *asteriscos* para dar <span className="text-indigo-500 font-bold ml-1">cor</span></span></Label>
-            <textarea value={editableTemplate.heroTitle || ""} onChange={(e) => setDraftText("heroTitle", e.target.value)} placeholder="T�tulo da p�gina..." className="w-full min-h-[100px] rounded-lg border border-input bg-slate-50 p-3 text-sm text-slate-900 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y shadow-inner" />
+            <Label className="text-xs font-bold text-slate-500 uppercase">Título Principal</Label>
+            <textarea value={editableTemplate.heroTitle || ""} onChange={(e) => setDraftText("heroTitle", e.target.value)} placeholder="Título da página..." className="w-full min-h-[100px] rounded-lg border border-input bg-slate-50 p-3 text-sm text-slate-900 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y shadow-inner" />
           </div>
           <div className="space-y-1 mt-3">
-            <Label className="text-xs font-bold text-slate-500 uppercase">Subt�tulo</Label>
-            <textarea value={editableTemplate.heroSubtitle || ""} onChange={(e) => setDraftText("heroSubtitle", e.target.value)} placeholder="Breve explica��o..." className="w-full min-h-[80px] rounded-lg border border-input bg-slate-50 p-3 text-sm text-slate-900 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y shadow-inner" />
+            <Label className="text-xs font-bold text-slate-500 uppercase">Subtítulo</Label>
+            <textarea value={editableTemplate.heroSubtitle || ""} onChange={(e) => setDraftText("heroSubtitle", e.target.value)} placeholder="Breve explicação..." className="w-full min-h-[80px] rounded-lg border border-input bg-slate-50 p-3 text-sm text-slate-900 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y shadow-inner" />
           </div>
         </div>
       </div>
@@ -1446,7 +1446,7 @@ export default function ClienteDetailPage() {
                   <Input
                     value={[editableTemplate.step1Option1, editableTemplate.step1Option2, editableTemplate.step1Option3][idx] || ""}
                     onChange={(e) => setDraftText(`step1Option${idx + 1}`, e.target.value)}
-                    placeholder={`Op��o ${idx + 1}`}
+                    placeholder={`Opção ${idx + 1}`}
                     className="h-9 text-sm bg-slate-50 font-medium shadow-inner"
                   />
                   <Button type="button" variant="ghost" size="icon" onClick={() => setDraftText(`step1Option${idx + 1}`, "")} className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0 absolute right-1">
@@ -1458,14 +1458,14 @@ export default function ClienteDetailPage() {
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-            <Label className="text-sm font-bold text-slate-800 block">2. Benef�cios Secund�rios</Label>
+            <Label className="text-sm font-bold text-slate-800 block">2. Benefícios Secundários</Label>
             <textarea value={editableTemplate.step2Question || ""} onChange={(e) => setDraftText("step2Question", e.target.value)} className="w-full min-h-[70px] rounded-lg border border-input bg-slate-50 p-3 text-sm text-slate-900 font-medium focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y shadow-inner" />
             <div className="space-y-2 mt-3">
               {(editableTemplate.step2Options || []).map((opt, idx) => (
                 <div key={`step2-opt-${idx}`} className="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100 relative group">
                   <div className="flex-1 space-y-2">
-                    <Input value={opt.label || ""} onChange={(e) => setDraftOption("step2Options", idx, "label", e.target.value)} placeholder="T�tulo da Op��o" className="h-9 text-sm bg-white font-medium shadow-sm border-slate-200 focus-visible:border-blue-400" />
-                    <Input value={opt.sublabel || ""} onChange={(e) => setDraftOption("step2Options", idx, "sublabel", e.target.value)} placeholder="Descri��o da op��o" className="h-8 text-xs bg-white text-slate-600 shadow-sm border-slate-200 focus-visible:border-blue-400" />
+                    <Input value={opt.label || ""} onChange={(e) => setDraftOption("step2Options", idx, "label", e.target.value)} placeholder="Título da Opção" className="h-9 text-sm bg-white font-medium shadow-sm border-slate-200 focus-visible:border-blue-400" />
+                    <Input value={opt.sublabel || ""} onChange={(e) => setDraftOption("step2Options", idx, "sublabel", e.target.value)} placeholder="Descrição da opção" className="h-8 text-xs bg-white text-slate-600 shadow-sm border-slate-200 focus-visible:border-blue-400" />
                   </div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeDraftOption("step2Options", idx)} className="h-8 w-8 absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white border shadow-sm text-red-500 hover:bg-red-50 rounded-full">
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1473,20 +1473,20 @@ export default function ClienteDetailPage() {
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" onClick={() => addDraftOption("step2Options")} className="w-full text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100 hover:text-blue-700 border-dashed mt-2 h-9">
-                <Plus className="w-4 h-4 mr-1" /> Nova Op��o
+                <Plus className="w-4 h-4 mr-1" /> Nova Opção
               </Button>
             </div>
           </div>
 
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-            <Label className="text-sm font-bold text-slate-800 block">5. Motiva��o Auxiliar</Label>
+            <Label className="text-sm font-bold text-slate-800 block">5. Motivação Auxiliar</Label>
             <textarea value={editableTemplate.step5Question || ""} onChange={(e) => setDraftText("step5Question", e.target.value)} className="w-full min-h-[70px] rounded-lg border border-input bg-slate-50 p-3 text-sm text-slate-900 font-medium focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y shadow-inner" />
             <div className="space-y-2 mt-3">
               {(editableTemplate.step5Options || []).map((opt, idx) => (
                 <div key={`step5-opt-${idx}`} className="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100 relative group">
                   <div className="flex-1 space-y-2">
-                    <Input value={opt.label || ""} onChange={(e) => setDraftOption("step5Options", idx, "label", e.target.value)} placeholder="T�tulo da Op��o" className="h-9 text-sm bg-white font-medium shadow-sm border-slate-200 focus-visible:border-blue-400" />
-                    <Input value={opt.sublabel || ""} onChange={(e) => setDraftOption("step5Options", idx, "sublabel", e.target.value)} placeholder="Descri��o da op��o" className="h-8 text-xs bg-white text-slate-500 shadow-sm border-slate-200 focus-visible:border-blue-400" />
+                    <Input value={opt.label || ""} onChange={(e) => setDraftOption("step5Options", idx, "label", e.target.value)} placeholder="Título da Opção" className="h-9 text-sm bg-white font-medium shadow-sm border-slate-200 focus-visible:border-blue-400" />
+                    <Input value={opt.sublabel || ""} onChange={(e) => setDraftOption("step5Options", idx, "sublabel", e.target.value)} placeholder="Descrição da opção" className="h-8 text-xs bg-white text-slate-500 shadow-sm border-slate-200 focus-visible:border-blue-400" />
                   </div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeDraftOption("step5Options", idx)} className="h-8 w-8 absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white border shadow-sm text-red-500 hover:bg-red-50 rounded-full">
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1494,7 +1494,7 @@ export default function ClienteDetailPage() {
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" onClick={() => addDraftOption("step5Options")} className="w-full text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100 hover:text-blue-700 border-dashed mt-2 h-9">
-                <Plus className="w-4 h-4 mr-1" /> Nova Op��o
+                <Plus className="w-4 h-4 mr-1" /> Nova Opção
               </Button>
             </div>
           </div>
@@ -1506,13 +1506,13 @@ export default function ClienteDetailPage() {
       <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
          <h3 className="font-semibold text-lg text-slate-800 flex items-center gap-2">
             <HelpCircle className="w-5 h-5 text-amber-500" />
-            D�vidas Frequentes
+            Dúvidas Frequentes
          </h3>
          <div className="space-y-3">
           {(editableTemplate.faqItems || []).map((item, idx) => (
             <div key={`faq-opt-${idx}`} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 relative group">
               <div className="flex justify-between items-center">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide">D�vida {idx + 1}</Label>
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Dúvida {idx + 1}</Label>
                 <Button type="button" variant="ghost" size="icon" onClick={() => removeDraftFaqItem(idx)} className="h-7 w-7 text-red-400 hover:text-red-500 hover:bg-red-50 rounded bg-white border shadow-sm absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
@@ -1520,7 +1520,7 @@ export default function ClienteDetailPage() {
               <Input
                 value={item.question || ""}
                 onChange={(e) => setDraftFaqItem(idx, "question", e.target.value)}
-                placeholder="Ex: Qual a dura��o?"
+                placeholder="Ex: Qual a duração?"
                 className="h-10 text-sm bg-slate-50 border-input font-medium text-slate-900 placeholder:text-slate-400 shadow-inner"
               />
               <textarea
@@ -1532,14 +1532,14 @@ export default function ClienteDetailPage() {
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={addDraftFaqItem} className="w-full bg-white text-indigo-600 border-indigo-200 border-dashed hover:bg-indigo-50 hover:text-indigo-700 shadow-sm mt-3 h-11">
-            <Plus className="w-4 h-4 mr-1" /> Adicionar Nova D�vida
+            <Plus className="w-4 h-4 mr-1" /> Adicionar Nova Dúvida
           </Button>
         </div>
       </div>
     )}
   </div>
 
-  {/* Footer com A��es */}
+  {/* Footer com Ações */}
   <div className="p-5 border-t border-slate-200 bg-white grid grid-cols-2 gap-3 shrink-0">
     <Button type="button" variant="outline" onClick={() => setVariantDraft("{}")} className="shadow-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 h-11 font-semibold">
       Descartar
@@ -1549,7 +1549,7 @@ export default function ClienteDetailPage() {
     </Button>
     <Button type="button" className="col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 shadow-sm text-base" onClick={handleSaveVariant} disabled={variantSaving}>
       <Save className="w-4 h-4 mr-2" />
-      {variantSaving ? "Publicando Permanente..." : "Salvar Altera��es"}
+      {variantSaving ? "Publicando Permanente..." : "Salvar Alterações"}
     </Button>
 
     {variantStatus && (
