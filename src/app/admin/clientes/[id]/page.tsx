@@ -868,6 +868,24 @@ export default function ClienteDetailPage() {
 
                 <div className="flex flex-wrap gap-2">
                   <button
+                    onClick={() => {
+                      setPreviewVariant("A");
+                      setPreviewModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg"
+                  >
+                    <ExternalLink className="w-4 h-4" /> Preview Teste A
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPreviewVariant("B");
+                      setPreviewModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-2 rounded-lg"
+                  >
+                    <ExternalLink className="w-4 h-4" /> Preview Teste B
+                  </button>
+                  <button
                     onClick={() => window.open(landingUrlA, "_blank", "noopener,noreferrer")}
                     className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg"
                   >
@@ -889,7 +907,7 @@ export default function ClienteDetailPage() {
                     onClick={() => setPreviewModalOpen(true)}
                     className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg"
                   >
-                    <ExternalLink className="w-4 h-4" /> Abrir preview visual A/B
+                    <ExternalLink className="w-4 h-4" /> Abrir preview visual A/B (com abas)
                   </button>
                 </div>
 
