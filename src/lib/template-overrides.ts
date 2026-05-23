@@ -129,8 +129,8 @@ export function applyTemplateOverrides(baseTemplate: AreaTemplate, overrides: Pa
 
   // Force strip legacy HTML from all string fields that come from Database overrides
   for (const key of Object.keys(merged)) {
-    if (typeof (merged as Record<string, string>)[key] === "string") {
-      (merged as Record<string, string>)[key] = (merged as Record<string, string>)[key].replace(/<[^>]*>?/gm, "").replace(/\*/g, "");
+    if (typeof (merged as unknown as Record<string, string>)[key] === "string") {
+      (merged as unknown as Record<string, string>)[key] = (merged as unknown as Record<string, string>)[key].replace(/<[^>]*>?/gm, "").replace(/\*/g, "");
     }
   }
 
