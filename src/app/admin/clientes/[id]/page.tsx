@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-client";
 import { getAreaTemplateByVariant, type LegalAreaType } from "@/lib/legal-area-templates";
 import { applyTemplateOverrides, sanitizeTemplateOverrides } from "@/lib/template-overrides";
+import { buildBrandThemeVars } from "@/lib/brand-theme";
+import { renderHeroTitle } from "@/lib/render-hero-title";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -127,6 +129,7 @@ export default function ClienteDetailPage() {
   const [variantError, setVariantError] = useState<string | null>(null);
   const [variantSaving, setVariantSaving] = useState(false);
   const [variantSuggesting, setVariantSuggesting] = useState(false);
+  const [previewVariant, setPreviewVariant] = useState<"A" | "B">("A");
   const [activeTab, setActiveTab] = useState<TabId>("leads");
   const [dateRange, setDateRange] = useState<DateRange>("week");
   const [leadPage, setLeadPage] = useState(1);
@@ -457,6 +460,8 @@ export default function ClienteDetailPage() {
     () => applyTemplateOverrides(getAreaTemplateByVariant(areaAtual, "B"), parsedVariantDraft.data),
     [areaAtual, parsedVariantDraft.data]
   );
+  const previewTemplate = previewVariant === "A" ? templatePreviewA : templatePreviewB;
+  const previewTheme = useMemo(() => buildBrandThemeVars(form.cor_primaria || tenant?.cor_primaria), [form.cor_primaria, tenant?.cor_primaria]);
 
   const selectedRangeDays = RANGE_OPTIONS.find((item) => item.id === dateRange)?.days || 7;
 
@@ -754,43 +759,75 @@ export default function ClienteDetailPage() {
 
                 <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">Preview lateral (A x B)</p>
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">Preview visual da landing</p>
                     {parsedVariantDraft.error && <span className="text-[11px] text-red-600">{parsedVariantDraft.error}</span>}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                    <article className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
-                      <p className="font-black text-slate-700 uppercase tracking-wide">Variante A (controle)</p>
-                      <div>
-                        <p className="text-slate-500">Hero</p>
-                        <p className="font-semibold text-slate-900">{templatePreviewA.heroTitle}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Pergunta 1</p>
-                        <p className="font-medium text-slate-800">{templatePreviewA.step1Question}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Pergunta 2</p>
-                        <p className="font-medium text-slate-800">{templatePreviewA.step2Question}</p>
-                      </div>
-                    </article>
-
-                    <article className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-2">
-                      <p className="font-black text-blue-700 uppercase tracking-wide">Variante B (rascunho atual)</p>
-                      <div>
-                        <p className="text-slate-500">Hero</p>
-                        <p className="font-semibold text-slate-900">{templatePreviewB.heroTitle}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Pergunta 1</p>
-                        <p className="font-medium text-slate-800">{templatePreviewB.step1Question}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Pergunta 2</p>
-                        <p className="font-medium text-slate-800">{templatePreviewB.step2Question}</p>
-                      </div>
-                    </article>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewVariant("A")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                        previewVariant === "A" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      Teste A
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewVariant("B")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                        previewVariant === "B" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      Teste B
+                    </button>
+                    <span className="text-xs text-slate-500">
+                      Exibindo: <span className="font-semibold text-slate-700">{previewVariant === "A" ? "Variante A (controle)" : "Variante B (rascunho atual)"}</span>
+                    </span>
                   </div>
+
+                  <article className="rounded-xl border border-slate-200 overflow-hidden" style={previewTheme}>
+                    <div className="p-4 border-b border-slate-100" style={{ backgroundColor: "var(--brand-50)" }}>
+                      <div className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: "var(--brand-100)", color: "var(--brand-900)" }}>
+                        {previewTemplate.heroBadge}
+                      </div>
+                      <h3 className="mt-3 text-xl font-black leading-tight text-slate-900">{renderHeroTitle(previewTemplate.heroTitle)}</h3>
+                      <p className="mt-2 text-sm text-slate-600">{previewTemplate.heroSubtitle}</p>
+
+                      <button
+                        type="button"
+                        className="mt-4 inline-flex items-center px-4 py-2 rounded-lg text-sm font-bold text-white"
+                        style={{ backgroundColor: "var(--brand-solid)", color: "var(--brand-on-solid)" }}
+                      >
+                        Iniciar Analise
+                      </button>
+                    </div>
+
+                    <div className="p-4 bg-white space-y-3">
+                      <div className="rounded-lg border border-slate-200 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 1</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">{previewTemplate.step1Question}</p>
+                        <div className="mt-2 space-y-1 text-xs text-slate-600">
+                          <p>• {previewTemplate.step1Option1}</p>
+                          <p>• {previewTemplate.step1Option2}</p>
+                          <p>• {previewTemplate.step1Option3}</p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-200 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 2</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">{previewTemplate.step2Question}</p>
+                        <p className="mt-2 text-xs text-slate-600">Exemplo de opcao: {previewTemplate.step2Options[0]?.label || "-"}</p>
+                      </div>
+
+                      <div className="rounded-lg border border-slate-200 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pergunta 5</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">{previewTemplate.step5Question}</p>
+                        <p className="mt-2 text-xs text-slate-600">Exemplo de opcao: {previewTemplate.step5Options[0]?.label || "-"}</p>
+                      </div>
+                    </div>
+                  </article>
                 </div>
               </div>
 
