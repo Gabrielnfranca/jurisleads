@@ -1419,7 +1419,7 @@ export default function ClienteDetailPage() {
             <Input value={editableTemplate.heroBadge || ""} onChange={(e) => setDraftText("heroBadge", e.target.value)} className="bg-slate-50 focus-visible:ring-indigo-500 shadow-inner" placeholder="Ex: Atendimento 24h" />
           </div>
           <div className="space-y-1 mt-3">
-            <Label className="text-xs font-bold text-slate-500 uppercase">T�tulo Principal</Label>
+            <Label className="text-xs font-bold text-slate-500 uppercase flex items-center justify-between">T�tulo Principal <span className="normal-case text-[10px] text-slate-400 font-normal">Use *asteriscos* para dar <span className="text-indigo-500 font-bold ml-1">cor</span></span></Label>
             <textarea value={editableTemplate.heroTitle || ""} onChange={(e) => setDraftText("heroTitle", e.target.value)} placeholder="T�tulo da p�gina..." className="w-full min-h-[100px] rounded-lg border border-input bg-slate-50 p-3 text-sm text-slate-900 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none resize-y shadow-inner" />
           </div>
           <div className="space-y-1 mt-3">

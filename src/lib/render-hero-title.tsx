@@ -1,28 +1,40 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 
-const HERO_TITLE_PATTERN = /^(.*)<span className="([^"]+)">([^<]+)<\/span>(.*)$/;
-
-function isSafeClassName(value: string) {
-  return /^[a-zA-Z0-9\s:_\-\/().%\[\]]+$/.test(value);
-}
+const HERO_TITLE_SPAN_PATTERN = /^(.*)<span.*?>([^<]+)<\/span>(.*)$/i;
+const HERO_TITLE_MARKDOWN_PATTERN = /^(.*?)\*(.+?)\*(.*)$/;
 
 export function renderHeroTitle(title: string): ReactNode {
-  const match = title.match(HERO_TITLE_PATTERN);
+  // Se for o formato antigo de HTML (para nÃ£o quebrar quem jÃ¡ estÃ¡ salvo com span)
+  const spanMatch = title.match(HERO_TITLE_SPAN_PATTERN);
+  if (spanMatch) {
+    const before = spanMatch[1];
+    const highlight = spanMatch[2];
+    const after = spanMatch[3];
 
-  if (!match) {
-    return title;
+    return (
+      <>
+        {before}
+        <span style={{ color: "var(--brand-solid)" }}>{highlight}</span>
+        {after}
+      </>
+    );
   }
 
-  const before = match[1];
-  const className = isSafeClassName(match[2]) ? match[2] : "";
-  const highlight = match[3];
-  const after = match[4];
+  // Se for o formato novo e simples com asteriscos (*destaque*)
+  const mdMatch = title.match(HERO_TITLE_MARKDOWN_PATTERN);
+  if (mdMatch) {
+    const before = mdMatch[1];
+    const highlight = mdMatch[2];
+    const after = mdMatch[3];
 
-  return (
-    <>
-      {before}
-      <span className={className}>{highlight}</span>
-      {after}
-    </>
-  );
+    return (
+      <>
+        {before}
+        <span style={{ color: "var(--brand-solid)" }}>{highlight}</span>
+        {after}
+      </>
+    );
+  }
+
+  return title;
 }

@@ -1,4 +1,4 @@
-import type { AreaTemplate } from "@/lib/legal-area-templates";
+﻿import type { AreaTemplate } from "@/lib/legal-area-templates";
 
 type OptionItem = { label: string; sublabel: string };
 type FaqItem = { question: string; answer: string };
@@ -60,10 +60,6 @@ function sanitizeOptions(items: unknown, maxItems = 6): OptionItem[] | undefined
       if (!item || typeof item !== "object") return null;
       const label = ((item as { label?: unknown }).label as string) || "";
       const sublabel = ((item as { sublabel?: unknown }).sublabel as string) || "";
-      /* 
-       We allow partially empty fields while drafting to avoid the UI "eating"
-       the row before the user starts typing. Blank validations are looser for the draft.
-      */
       return { 
         label: label.substring(0, 120), 
         sublabel: sublabel.substring(0, 180) 
@@ -98,7 +94,8 @@ export function sanitizeTemplateOverrides(raw: unknown): Partial<AreaTemplate> {
   for (const field of TEXT_FIELDS) {
     const cleaned = cleanText(input[field], 260);
     if (cleaned) {
-      output[field] = cleaned;
+      // Remove HTML tags when saving (failsafe)
+      output[field] = cleaned.replace(/<span[^>]*>([^<]+)<\/span>/gi, "*$1*");
     }
   }
 
@@ -118,8 +115,10 @@ export function sanitizeTemplateOverrides(raw: unknown): Partial<AreaTemplate> {
 }
 
 export function applyTemplateOverrides(baseTemplate: AreaTemplate, overrides: Partial<AreaTemplate> | null | undefined): AreaTemplate {
+  // If no overrides, baseTemplate is already clean from previous step
   if (!overrides) return baseTemplate;
-  return {
+  
+  const merged = {
     ...baseTemplate,
     ...overrides,
     step2Options: overrides.step2Options || baseTemplate.step2Options,
@@ -127,4 +126,13 @@ export function applyTemplateOverrides(baseTemplate: AreaTemplate, overrides: Pa
     step5Options: overrides.step5Options || baseTemplate.step5Options,
     faqItems: overrides.faqItems || baseTemplate.faqItems,
   };
+
+  // Force strip legacy HTML from all string fields that come from Database overrides
+  for (const key of Object.keys(merged)) {
+    if (typeof (merged as Record<string, unknown>)[key] === "string") {
+      (merged as Record<string, unknown>)[key] = (merged as Record<string, unknown>)[key].replace(/<span[^>]*>([^<]+)<\/span>/gi, "*$1*");
+    }
+  }
+
+  return merged;
 }
