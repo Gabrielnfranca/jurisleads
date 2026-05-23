@@ -58,10 +58,16 @@ function sanitizeOptions(items: unknown, maxItems = 6): OptionItem[] | undefined
   const safe = items
     .map((item) => {
       if (!item || typeof item !== "object") return null;
-      const label = cleanText((item as { label?: unknown }).label, 120);
-      const sublabel = cleanText((item as { sublabel?: unknown }).sublabel, 180);
-      if (!label || !sublabel) return null;
-      return { label, sublabel };
+      const label = ((item as { label?: unknown }).label as string) || "";
+      const sublabel = ((item as { sublabel?: unknown }).sublabel as string) || "";
+      /* 
+       We allow partially empty fields while drafting to avoid the UI "eating"
+       the row before the user starts typing. Blank validations are looser for the draft.
+      */
+      return { 
+        label: label.substring(0, 120), 
+        sublabel: sublabel.substring(0, 180) 
+      };
     })
     .filter(Boolean) as OptionItem[];
   return safe.length ? safe.slice(0, maxItems) : undefined;
@@ -72,10 +78,12 @@ function sanitizeFaq(items: unknown, maxItems = 8): FaqItem[] | undefined {
   const safe = items
     .map((item) => {
       if (!item || typeof item !== "object") return null;
-      const question = cleanText((item as { question?: unknown }).question, 180);
-      const answer = cleanText((item as { answer?: unknown }).answer, 450);
-      if (!question || !answer) return null;
-      return { question, answer };
+      const question = ((item as { question?: unknown }).question as string) || "";
+      const answer = ((item as { answer?: unknown }).answer as string) || "";
+      return { 
+        question: question.substring(0, 180), 
+        answer: answer.substring(0, 450) 
+      };
     })
     .filter(Boolean) as FaqItem[];
   return safe.length ? safe.slice(0, maxItems) : undefined;

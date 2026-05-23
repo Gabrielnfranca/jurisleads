@@ -504,12 +504,12 @@ export default function ClienteDetailPage() {
     });
   };
 
-  const addDraftOption = (section: "step2Options" | "step5Options") => {
+  const addDraftOption = (section: "step2Options" | "step3Options" | "step5Options") => {
     setDraftValue((draft) => {
       const current = Array.isArray(draft[section])
         ? [...(draft[section] as Array<Record<string, unknown>>)]
-        : (getFallbackOptions(section) as Array<Record<string, unknown>>);
-      current.push({ label: "", sublabel: "" });
+        : (getFallbackOptions(section as "step2Options" | "step5Options") as Array<Record<string, unknown>>);
+      current.push({ label: "Nova Opção", sublabel: "Descrição da opção" });
       return { ...draft, [section]: current };
     });
   };
@@ -547,7 +547,7 @@ export default function ClienteDetailPage() {
       const current = Array.isArray(draft.faqItems)
         ? [...(draft.faqItems as Array<Record<string, unknown>>)]
         : [...fallback];
-      current.push({ question: "", answer: "" });
+      current.push({ question: "Nova Pergunta?", answer: "Resposta da pergunta..." });
       return { ...draft, faqItems: current };
     });
   };
